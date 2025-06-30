@@ -19,7 +19,9 @@ QuadTreeNode::QuadTreeNode()
 }
 
 QuadTreeNode::~QuadTreeNode() {
-	deleteLeaves();
+	if (_topLeft) {
+		deleteLeaves();
+	}
 }
 
 void QuadTreeNode::insertParticleToChildren(Particle* const particle) {
@@ -44,7 +46,7 @@ void QuadTreeNode::insertParticleToChildren(Particle* const particle) {
 void QuadTreeNode::addParticle(Particle* const particle) {
 	_particles.insert(particle);
 	
-	if (_topLeft != NULL) {
+	if (_topLeft != nullptr) {
 		insertParticleToChildren(particle);
 		return;
 	}
@@ -58,7 +60,7 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 
 void QuadTreeNode::split() {
 	Vector2d new_dimentions = _dimentions / 2;
-	_topLeft = new QuadTreeNode(_position, new_dimentions, this);
+	_topLeft = new QuadTreeNode(Vector2d(_position.x, _position.y), new_dimentions, this);
 	_bottomLeft = new QuadTreeNode(Vector2d(_position.x, _position.y + _dimentions.h / 2), new_dimentions, this);
 	_topRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2, _position.y), new_dimentions, this);
 	_bottomRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2 , _position.y + _dimentions.h / 2), new_dimentions, this);
@@ -67,11 +69,24 @@ void QuadTreeNode::split() {
 	}
 }
 
+void QuadTreeNode::merge() {
+	for (Particle* particle : _particles) {
+		particle->quad = this;
+	}
+	if (_topLeft && this) {
+		deleteLeaves();
+	}
+}
+
 void QuadTreeNode::deleteLeaves() {
 	delete _topLeft;
 	delete _bottomLeft;
 	delete _topRight;
 	delete _bottomRight;
+	_topLeft = nullptr;
+	_bottomLeft = nullptr;
+	_topRight = nullptr;
+	_bottomRight = nullptr;
 }
 
 void QuadTreeNode::updateParticleOwnership(Particle* particle) {
@@ -82,10 +97,9 @@ void QuadTreeNode::updateParticleOwnership(Particle* particle) {
 	}
 
 	_particles.erase(particle);
+	particle->quad = nullptr;
 	if (_particles.size() < _maxCapacity) {
-		if (_topLeft) {
-			deleteLeaves();
-		}
+		merge();
 	}
 	if (_parent) {
 		_parent->updateParticleOwnership(particle);
@@ -109,7 +123,7 @@ const std::unordered_set<Particle*>& QuadTreeNode::query(const Vector2d& positio
 	const unsigned int squareRadius = distance * scale;
 	
 	if (radius + squareRadius >= distance) {
-		if (_topLeft == NULL) {
+		if (_topLeft == nullptr) {
 			return _particles;
 		}
 		auto tl = _topLeft->query(position, radius);

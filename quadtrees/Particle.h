@@ -11,6 +11,8 @@ struct Particle {
 
     void move(const Vector2d& displacement) {
         position += displacement;
-        quad->updateParticleOwnership(this);
+        if (quad != nullptr) {
+            quad->updateParticleOwnership(this);
+        }
     }
 };
