@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "Vector2d.h"
+#include <SFML/Graphics.hpp>
 
 struct Particle;
 
@@ -22,14 +23,15 @@ class QuadTreeNode {
     QuadTreeNode* _bottomRight = nullptr;
     unsigned int _maxCapacity = 4;
     std::unordered_set<Particle*> _particles;
-
+    unsigned int _depth = 0;
+    static const unsigned int _maxDepth = 10;
 public:
     QuadTreeNode(const Vector2d& position, const Vector2d& dimentions);
     QuadTreeNode();
     ~QuadTreeNode();
     void addParticle(Particle* const particle);
     void updateParticleOwnership(Particle* const particle);
-    const std::unordered_set<Particle*>& query(const Vector2d& position, const unsigned int radius);
-
+    std::unordered_set<Particle*> query(const Vector2d& position, const double radius);
+    void draw(sf::RenderWindow& window);
 };
 

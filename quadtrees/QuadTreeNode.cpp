@@ -11,6 +11,7 @@ QuadTreeNode::QuadTreeNode(const Vector2d& position, const Vector2d& dimentions)
 
 QuadTreeNode::QuadTreeNode(const Vector2d& position, const Vector2d& dimentions, QuadTreeNode* const parent) :
 	_position(position), _dimentions(dimentions), _parent(parent) {
+	_depth = _parent->_depth + 1;
 }
 
 
@@ -59,6 +60,9 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 }
 
 void QuadTreeNode::split() {
+	if (_depth >= _maxDepth) {
+		return;
+	}
 	Vector2d new_dimentions = _dimentions / 2;
 	_topLeft = new QuadTreeNode(Vector2d(_position.x, _position.y), new_dimentions, this);
 	_bottomLeft = new QuadTreeNode(Vector2d(_position.x, _position.y + _dimentions.h / 2), new_dimentions, this);
@@ -70,6 +74,9 @@ void QuadTreeNode::split() {
 }
 
 void QuadTreeNode::merge() {
+	if (_parent == nullptr) {
+		return;
+	}
 	for (Particle* particle : _particles) {
 		particle->quad = this;
 	}
@@ -90,37 +97,45 @@ void QuadTreeNode::deleteLeaves() {
 }
 
 void QuadTreeNode::updateParticleOwnership(Particle* particle) {
-	if (particle->position.x > _position.x && particle->position.y > _position.y
-		&& particle->position.x < _position.x + _dimentions.w && particle->position.y < _position.y + _dimentions.h) {
+	if (_parent == nullptr) {
+		addParticle(particle);
+		return;
+	}
+	if (particle->position.x >= _position.x && particle->position.y >= _position.y
+		&& particle->position.x <= _position.x + _dimentions.w && particle->position.y <= _position.y + _dimentions.h) {
 		addParticle(particle);
 		return;
 	}
 
 	_particles.erase(particle);
-	particle->quad = nullptr;
+	particle->quad = _parent;
 	if (_particles.size() < _maxCapacity) {
 		merge();
 	}
-	if (_parent) {
-		_parent->updateParticleOwnership(particle);
-	}
+	_parent->updateParticleOwnership(particle);
+	
 }
 
-const std::unordered_set<Particle*>& QuadTreeNode::query(const Vector2d& position, const unsigned int radius) {
+std::unordered_set<Particle*> QuadTreeNode::query(const Vector2d& position, const double radius) {
 	Vector2d middle = _position + _dimentions / 2;
-	const unsigned int distanceX = abs(middle.x - position.x);
-	const unsigned int distanceY = abs(middle.y - position.y);
 
-	const unsigned int distance = sqrt(pow(distanceX, 2) + pow(distanceY, 2));
+	const double distanceX = abs(middle.x - position.x);
+	const double distanceY = abs(middle.y - position.y);
+
+	const double distance = sqrt(pow(distanceX, 2) + pow(distanceY, 2));
 	
+	unsigned int squareRadius = 0;
 	unsigned int scale;
-	if (distanceX > distanceY) {
-		scale = _dimentions.x / distanceX;
+
+	if (distanceX != 0 || distanceY != 0) {
+		if (distanceX > distanceY) {
+			scale = _dimentions.x / distanceX;
+		}
+		else if (distanceX < distanceY) {
+			scale = _dimentions.y / distanceY;
+		}
+		squareRadius = distance * scale;
 	}
-	else {
-		scale = _dimentions.y / distanceY;
-	}
-	const unsigned int squareRadius = distance * scale;
 	
 	if (radius + squareRadius >= distance) {
 		if (_topLeft == nullptr) {
@@ -139,5 +154,21 @@ const std::unordered_set<Particle*>& QuadTreeNode::query(const Vector2d& positio
 		result.insert(br.begin(), br.end());
 		return result;
 	}
-	return std::unordered_set<Particle*>{};
+	return {};
+}
+
+void QuadTreeNode::draw(sf::RenderWindow& window) {	
+	sf::RectangleShape r(sf::Vector2f(_dimentions.x * window.getSize().x, _dimentions.y * window.getSize().y));
+	r.setPosition(sf::Vector2f( _position.x * window.getSize().x, _position.y * window.getSize().y));
+	r.setOutlineThickness(1.f);
+	r.setFillColor(sf::Color::Black);
+	r.setOutlineColor(sf::Color::White);
+	window.draw(r);
+	
+	if (_topLeft) {
+		_topLeft->draw(window);
+		_topRight->draw(window);
+		_bottomLeft->draw(window);
+		_bottomRight->draw(window);
+	}
 }

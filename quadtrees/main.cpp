@@ -1,12 +1,35 @@
 ﻿#include <iostream>
+#include <math.h>
+#include <chrono>
+#include <algorithm>
+
 #include <SFML/Graphics.hpp>
 
 #include "QuadTreeNode.h"
 #include "Particle.h"
 
-void simulate(std::vector<Particle>& particles) {
-    for (Particle& particle : particles) {
-        particle.move({ double(rand()) / RAND_MAX - 0.5, double(rand()) / RAND_MAX - 0.5});
+#define MIN 0.1
+
+void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
+    const double scale = 0.05;
+    for (int i = 0; i < particles.size(); i++) {
+        Particle& particle = particles[i];
+        auto others = root.query(particle.position, 0.01);
+        Vector2d totalForce= { 0,0 };
+        for (Particle* other : others) {
+            if (other != &particle) {
+                Vector2d distance = { other->position.x - particle.position.x, other->position.y - particle.position.y };
+                const double force = scale * (1 * 1) / pow(std::max(distance.length(), MIN), 2); //minimal distance
+                totalForce.x += force * distance.x / distance.length();
+                totalForce.y += force * distance.y / distance.length();
+            }
+        }
+        Vector2d dv = { totalForce.x * dt, totalForce.y * dt };
+        particle.updateVelocity(dv);
+    }
+
+    for (int i = 0; i < particles.size(); i++) {
+        particles[i].move(dt);
     }
 }
 
@@ -30,19 +53,18 @@ int main()
     for (Particle& particle : particles) {
         root.addParticle(&particle);
     }
-    particles[0].move({ 1,1 });
-    particles[1].move({ 1,1 });
-
 
     const sf::Vector2u windowDimentions = { 600,600 };
     sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
     std::vector<sf::CircleShape> particles_visual;
     for (int i = 0; i < particles.size(); ++i) {
-        sf::CircleShape particle(1.f);
+        sf::CircleShape particle(3.f);
         particle.setPosition(sf::Vector2f( particles[i].position.x * windowDimentions.x, particles[i].position.y * windowDimentions.y));
         particle.setFillColor(sf::Color(255, 255, 255));
         particles_visual.push_back(particle);
     }
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
@@ -51,15 +73,27 @@ int main()
                 window.close();
             }
         }
-
-        simulate(particles);
-        updateVisualisation(particles, particles_visual, windowDimentions);
-        
         window.clear(sf::Color::Black);
+        root.draw(window);
         for (const auto& particle : particles_visual) {
             window.draw(particle);
         }
         window.display();
+        
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        double time_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
+        std::cout << "fps: " << 1 / time_elapsed << '\n';
+        std::cout << "time per frame : " << time_elapsed << '\n';
+
+        std::chrono::steady_clock::time_point sim_start = std::chrono::steady_clock::now();
+        simulate(particles, root, time_elapsed);
+        std::chrono::steady_clock::time_point sim_end = std::chrono::steady_clock::now();
+        double time_elapsed_on_simulation = std::chrono::duration_cast<std::chrono::microseconds>(sim_end - sim_start).count() / 1000000.f;
+        std::cout << "simulation time: " << time_elapsed_on_simulation << '\n';
+
+
+        begin = end;
+        updateVisualisation(particles, particles_visual, windowDimentions);
     }
 
     return 0;

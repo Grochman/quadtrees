@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 struct Vector2d {
     union {
         double x;
@@ -12,14 +14,16 @@ struct Vector2d {
     
     Vector2d() {};
     Vector2d(double x, double y) : x(x), y(y) {};
-
+    double length() {
+        return sqrt(pow(x, 2) + pow(y, 2));
+    }
     void operator+=(const Vector2d& other) {
         x += other.x;
         y += other.y;
     }
 
     Vector2d operator+(const Vector2d& other) {
-        return Vector2d(x += other.x, y += other.y);
+        return Vector2d(x + other.x, y + other.y);
     }
 
     Vector2d operator/(const int value) {
