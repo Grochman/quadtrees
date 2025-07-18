@@ -121,14 +121,14 @@ std::unordered_set<Particle*> QuadTreeNode::query(const Vector2d& position, cons
 
 	const double distanceX = abs(middle.x - position.x);
 	const double distanceY = abs(middle.y - position.y);
-
+	
 	const double distance = sqrt(pow(distanceX, 2) + pow(distanceY, 2));
 	
 	unsigned int squareRadius = 0;
-	unsigned int scale;
+	unsigned int scale = 1;
 
 	if (distanceX != 0 || distanceY != 0) {
-		if (distanceX > distanceY) {
+		if (distanceX >= distanceY) {
 			scale = _dimentions.x / distanceX;
 		}
 		else if (distanceX < distanceY) {
@@ -162,7 +162,7 @@ void QuadTreeNode::draw(sf::RenderWindow& window) {
 	r.setPosition(sf::Vector2f( _position.x * window.getSize().x, _position.y * window.getSize().y));
 	r.setOutlineThickness(1.f);
 	r.setFillColor(sf::Color::Black);
-	r.setOutlineColor(sf::Color::White);
+	r.setOutlineColor(sf::Color(100,100,100));
 	window.draw(r);
 	
 	if (_topLeft) {

@@ -11,23 +11,23 @@
 #define MIN 0.1
 
 void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
-    const double scale = 0.05;
+    double scale = 1/pow(particles.size(),2);
+    
     for (int i = 0; i < particles.size(); i++) {
         Particle& particle = particles[i];
-        auto others = root.query(particle.position, 0.01);
-        Vector2d totalForce= { 0,0 };
+        auto others = root.query(particle.position, 0.1);
+        Vector2d total_acceleration = { 0,0 };
         for (Particle* other : others) {
             if (other != &particle) {
-                Vector2d distance = { other->position.x - particle.position.x, other->position.y - particle.position.y };
-                const double force = scale * (1 * 1) / pow(std::max(distance.length(), MIN), 2); //minimal distance
-                totalForce.x += force * distance.x / distance.length();
-                totalForce.y += force * distance.y / distance.length();
+                Vector2d distance = particle.position.distance(other->position);
+                Vector2d unit_vector = distance.unit();
+                double distance_length = distance.length();
+                distance_length = std::min(distance_length, MIN);
+                total_acceleration += { scale * (1 / pow(distance_length, 2)) * unit_vector.x, scale * (1 / pow(distance_length, 2)) * unit_vector.y };
             }
         }
-        Vector2d dv = { totalForce.x * dt, totalForce.y * dt };
-        particle.updateVelocity(dv);
+        particle.updateAcceletation(total_acceleration);
     }
-
     for (int i = 0; i < particles.size(); i++) {
         particles[i].move(dt);
     }
@@ -42,7 +42,7 @@ void updateVisualisation(std::vector<Particle>& particles, std::vector<sf::Circl
 int main()
 {
     srand(time(NULL));
-    const unsigned int particleCount = 1000;
+    const unsigned int particleCount = 50;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
@@ -58,7 +58,7 @@ int main()
     sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
     std::vector<sf::CircleShape> particles_visual;
     for (int i = 0; i < particles.size(); ++i) {
-        sf::CircleShape particle(3.f);
+        sf::CircleShape particle(2.f);
         particle.setPosition(sf::Vector2f( particles[i].position.x * windowDimentions.x, particles[i].position.y * windowDimentions.y));
         particle.setFillColor(sf::Color(255, 255, 255));
         particles_visual.push_back(particle);
@@ -67,33 +67,21 @@ int main()
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     while (window.isOpen()) {
-        while (const std::optional event = window.pollEvent()) {
-            if ((event->is<sf::Event::KeyPressed>() &&
-               event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape)){ 
-                window.close();
-            }
-        }
         window.clear(sf::Color::Black);
         root.draw(window);
+        updateVisualisation(particles, particles_visual, windowDimentions);
         for (const auto& particle : particles_visual) {
             window.draw(particle);
         }
         window.display();
-        
+
+
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double time_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
         std::cout << "fps: " << 1 / time_elapsed << '\n';
-        std::cout << "time per frame : " << time_elapsed << '\n';
-
-        std::chrono::steady_clock::time_point sim_start = std::chrono::steady_clock::now();
-        simulate(particles, root, time_elapsed);
-        std::chrono::steady_clock::time_point sim_end = std::chrono::steady_clock::now();
-        double time_elapsed_on_simulation = std::chrono::duration_cast<std::chrono::microseconds>(sim_end - sim_start).count() / 1000000.f;
-        std::cout << "simulation time: " << time_elapsed_on_simulation << '\n';
-
-
         begin = end;
-        updateVisualisation(particles, particles_visual, windowDimentions);
+
+        simulate(particles, root, time_elapsed);
     }
 
     return 0;
