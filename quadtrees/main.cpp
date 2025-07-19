@@ -9,7 +9,7 @@
 #include "Particle.h"
 
 #define MIN 0.1
-
+/*
 void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
     double scale = 1/pow(particles.size(),2);
     
@@ -32,7 +32,7 @@ void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
         particles[i].move(dt);
     }
 }
-
+*/
 void updateVisualisation(std::vector<Particle>& particles, std::vector<sf::CircleShape>& particles_visual, const sf::Vector2u windowDim) {
     for (int i = 0; i < particles.size(); i++) {
         particles_visual[i].setPosition(sf::Vector2f(particles[i].position.x * windowDim.x, particles[i].position.y * windowDim.y));
@@ -42,7 +42,7 @@ void updateVisualisation(std::vector<Particle>& particles, std::vector<sf::Circl
 int main()
 {
     srand(time(NULL));
-    const unsigned int particleCount = 50;
+    const unsigned int particleCount = 25;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
@@ -58,7 +58,7 @@ int main()
     sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
     std::vector<sf::CircleShape> particles_visual;
     for (int i = 0; i < particles.size(); ++i) {
-        sf::CircleShape particle(2.f);
+        sf::CircleShape particle(5.f);
         particle.setPosition(sf::Vector2f( particles[i].position.x * windowDimentions.x, particles[i].position.y * windowDimentions.y));
         particle.setFillColor(sf::Color(255, 255, 255));
         particles_visual.push_back(particle);
@@ -80,8 +80,10 @@ int main()
         double time_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;
         std::cout << "fps: " << 1 / time_elapsed << '\n';
         begin = end;
-
-        simulate(particles, root, time_elapsed);
+        for (auto& particle : particles) {
+            particle.move(time_elapsed*0.01);
+        }
+        //simulate(particles, root, time_elapsed);
     }
 
     return 0;

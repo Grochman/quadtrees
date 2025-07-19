@@ -6,18 +6,14 @@
 #include "Particle.h"
 
 QuadTreeNode::QuadTreeNode(const Vector2d& position, const Vector2d& dimentions): 
-	_position(position), _dimentions(dimentions) {
-}
+	_position(position), _dimentions(dimentions) {}
 
 QuadTreeNode::QuadTreeNode(const Vector2d& position, const Vector2d& dimentions, QuadTreeNode* const parent) :
-	_position(position), _dimentions(dimentions), _parent(parent) {
-	_depth = _parent->_depth + 1;
-}
+	_position(position), _dimentions(dimentions), _parent(parent) {}
 
 
 QuadTreeNode::QuadTreeNode()
-	: _position({ 0,0 }), _dimentions({ 1,1 }) {
-}
+	: _position({ 0,0 }), _dimentions({ 1,1 }) {}
 
 QuadTreeNode::~QuadTreeNode() {
 	if (_topLeft) {
@@ -45,42 +41,56 @@ void QuadTreeNode::insertParticleToChildren(Particle* const particle) {
 }
 
 void QuadTreeNode::addParticle(Particle* const particle) {
-	_particles.insert(particle);
-	
+	particleCount++;
 	if (_topLeft != nullptr) {
 		insertParticleToChildren(particle);
 		return;
 	}
 	
-	particle->quad = this;
-	
-	if (_particles.size() == _maxCapacity) {
-		split();
+	if (!_particle) {
+		particle->quad = this;
+		_particle = particle;
+		return;
 	}
+	if (_particle == particle) {
+		return;
+	}
+
+	split();
+	insertParticleToChildren(particle);
+	insertParticleToChildren(_particle);
+	_particle = nullptr;
 }
 
 void QuadTreeNode::split() {
-	if (_depth >= _maxDepth) {
-		return;
-	}
 	Vector2d new_dimentions = _dimentions / 2;
 	_topLeft = new QuadTreeNode(Vector2d(_position.x, _position.y), new_dimentions, this);
 	_bottomLeft = new QuadTreeNode(Vector2d(_position.x, _position.y + _dimentions.h / 2), new_dimentions, this);
 	_topRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2, _position.y), new_dimentions, this);
 	_bottomRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2 , _position.y + _dimentions.h / 2), new_dimentions, this);
-	for (Particle* particle: _particles) {
-		insertParticleToChildren(particle);
-	}
 }
 
 void QuadTreeNode::merge() {
 	if (_parent == nullptr) {
 		return;
 	}
-	for (Particle* particle : _particles) {
-		particle->quad = this;
-	}
+	
 	if (_topLeft && this) {
+		if (_topLeft->_particle) {
+			_particle = _topLeft->_particle;
+		}
+		else if(_bottomLeft->_particle) {
+			_particle = _bottomLeft->_particle;
+		}
+		else if (_bottomRight->_particle) {
+			_particle = _bottomRight->_particle;
+		}
+		else if (_topRight->_particle) {
+			_particle = _topRight->_particle;
+		}
+		if (_particle) {
+			_particle->quad = this;
+		}
 		deleteLeaves();
 	}
 }
@@ -97,64 +107,21 @@ void QuadTreeNode::deleteLeaves() {
 }
 
 void QuadTreeNode::updateParticleOwnership(Particle* particle) {
-	if (_parent == nullptr) {
-		addParticle(particle);
-		return;
-	}
+	particleCount--;
 	if (particle->position.x >= _position.x && particle->position.y >= _position.y
 		&& particle->position.x <= _position.x + _dimentions.w && particle->position.y <= _position.y + _dimentions.h) {
 		addParticle(particle);
 		return;
 	}
 
-	_particles.erase(particle);
-	particle->quad = _parent;
-	if (_particles.size() < _maxCapacity) {
+	_particle = nullptr;
+	if (particleCount == 1) {
 		merge();
 	}
-	_parent->updateParticleOwnership(particle);
-	
-}
-
-std::unordered_set<Particle*> QuadTreeNode::query(const Vector2d& position, const double radius) {
-	Vector2d middle = _position + _dimentions / 2;
-
-	const double distanceX = abs(middle.x - position.x);
-	const double distanceY = abs(middle.y - position.y);
-	
-	const double distance = sqrt(pow(distanceX, 2) + pow(distanceY, 2));
-	
-	unsigned int squareRadius = 0;
-	unsigned int scale = 1;
-
-	if (distanceX != 0 || distanceY != 0) {
-		if (distanceX >= distanceY) {
-			scale = _dimentions.x / distanceX;
-		}
-		else if (distanceX < distanceY) {
-			scale = _dimentions.y / distanceY;
-		}
-		squareRadius = distance * scale;
+	if (_parent) {
+		particle->quad = _parent;
+		_parent->updateParticleOwnership(particle);
 	}
-	
-	if (radius + squareRadius >= distance) {
-		if (_topLeft == nullptr) {
-			return _particles;
-		}
-		auto tl = _topLeft->query(position, radius);
-		auto bl = _bottomLeft->query(position, radius);
-		auto tr = _topRight->query(position, radius);
-		auto br = _bottomRight->query(position, radius);
-
-		std::unordered_set<Particle*>result;
-		result.reserve(tl.size() + bl.size() + tr.size() + br.size());
-		result.insert(tl.begin(), tl.end());
-		result.insert(bl.begin(), bl.end());
-		result.insert(tr.begin(), tr.end());
-		result.insert(br.begin(), br.end());
-		return result;
-	}
-	return {};
 }
 
 void QuadTreeNode::draw(sf::RenderWindow& window) {	
