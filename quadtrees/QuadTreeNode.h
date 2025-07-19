@@ -21,10 +21,10 @@ class QuadTreeNode {
     QuadTreeNode* _topRight = nullptr;
     QuadTreeNode* _bottomLeft = nullptr;
     QuadTreeNode* _bottomRight = nullptr;
-    unsigned int _maxCapacity = 4;
+    unsigned int _maxCapacity = 1;
     std::unordered_set<Particle*> _particles;
     unsigned int _depth = 0;
-    static const unsigned int _maxDepth = 10;
+    static const unsigned int _maxDepth = 100;
 public:
     QuadTreeNode(const Vector2d& position, const Vector2d& dimentions);
     QuadTreeNode();

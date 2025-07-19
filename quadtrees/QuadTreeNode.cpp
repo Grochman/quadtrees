@@ -54,7 +54,7 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 	
 	particle->quad = this;
 	
-	if (_particles.size() == _maxCapacity) {
+	if (_particles.size() > _maxCapacity) {
 		split();
 	}
 }
@@ -97,10 +97,6 @@ void QuadTreeNode::deleteLeaves() {
 }
 
 void QuadTreeNode::updateParticleOwnership(Particle* particle) {
-	if (_parent == nullptr) {
-		addParticle(particle);
-		return;
-	}
 	if (particle->position.x >= _position.x && particle->position.y >= _position.y
 		&& particle->position.x <= _position.x + _dimentions.w && particle->position.y <= _position.y + _dimentions.h) {
 		addParticle(particle);
@@ -109,11 +105,12 @@ void QuadTreeNode::updateParticleOwnership(Particle* particle) {
 
 	_particles.erase(particle);
 	particle->quad = _parent;
-	if (_particles.size() < _maxCapacity) {
+	if (_particles.size() <= _maxCapacity) {
 		merge();
 	}
-	_parent->updateParticleOwnership(particle);
-	
+	if (_parent) {
+		_parent->updateParticleOwnership(particle);
+	}
 }
 
 std::unordered_set<Particle*> QuadTreeNode::query(const Vector2d& position, const double radius) {

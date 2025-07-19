@@ -12,10 +12,11 @@
 
 void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
     double scale = 1/pow(particles.size(),2);
-    
+    scale = 0.1;
+    dt *= scale;
     for (int i = 0; i < particles.size(); i++) {
         Particle& particle = particles[i];
-        auto others = root.query(particle.position, 0.1);
+        auto others = root.query(particle.position, 2);
         Vector2d total_acceleration = { 0,0 };
         for (Particle* other : others) {
             if (other != &particle) {
@@ -23,7 +24,7 @@ void simulate(std::vector<Particle>& particles, QuadTreeNode& root, double dt) {
                 Vector2d unit_vector = distance.unit();
                 double distance_length = distance.length();
                 distance_length = std::min(distance_length, MIN);
-                total_acceleration += { scale * (1 / pow(distance_length, 2)) * unit_vector.x, scale * (1 / pow(distance_length, 2)) * unit_vector.y };
+                total_acceleration += { (1 / pow(distance_length, 2)) * unit_vector.x, (1 / pow(distance_length, 2)) * unit_vector.y };
             }
         }
         particle.updateAcceletation(total_acceleration);
@@ -58,7 +59,7 @@ int main()
     sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
     std::vector<sf::CircleShape> particles_visual;
     for (int i = 0; i < particles.size(); ++i) {
-        sf::CircleShape particle(2.f);
+        sf::CircleShape particle(5.f);
         particle.setPosition(sf::Vector2f( particles[i].position.x * windowDimentions.x, particles[i].position.y * windowDimentions.y));
         particle.setFillColor(sf::Color(255, 255, 255));
         particles_visual.push_back(particle);
