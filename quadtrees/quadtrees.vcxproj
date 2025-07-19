@@ -134,12 +134,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BarnesHutQuadTreeNode.cpp" />
     <ClCompile Include="QuadTreeNode.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="QuadTreeNodeImp.inl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BarnesHutQuadTreeNode.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="QuadTreeNode.h" />
+    <ClInclude Include="QuadTreeNodeImp.h" />
     <ClInclude Include="Vector2d.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

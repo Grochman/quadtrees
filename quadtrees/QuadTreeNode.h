@@ -8,10 +8,8 @@
 struct Particle;
 
 class QuadTreeNode {
+protected:
     QuadTreeNode(const Vector2d& position, const Vector2d& dimentions, QuadTreeNode* const parent);
-    void deleteLeaves();
-    void split();
-    void merge();
     void insertParticleToChildren(Particle* const particle);
 
     Vector2d _position;
@@ -21,17 +19,15 @@ class QuadTreeNode {
     QuadTreeNode* _topRight = nullptr;
     QuadTreeNode* _bottomLeft = nullptr;
     QuadTreeNode* _bottomRight = nullptr;
-    unsigned int _maxCapacity = 4;
     std::unordered_set<Particle*> _particles;
     unsigned int _depth = 0;
-    static const unsigned int _maxDepth = 10;
+    static constexpr unsigned int _maxDepth = INT_MAX;
 public:
     QuadTreeNode(const Vector2d& position, const Vector2d& dimentions);
     QuadTreeNode();
-    ~QuadTreeNode();
-    void addParticle(Particle* const particle);
-    void updateParticleOwnership(Particle* const particle);
-    std::unordered_set<Particle*> query(const Vector2d& position, const double radius);
+    virtual ~QuadTreeNode() = default;
+    virtual void addParticle(Particle* const particle);
+    virtual void updateParticleOwnership(Particle* const particle) = 0;
     void draw(sf::RenderWindow& window);
 };
 
