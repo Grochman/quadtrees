@@ -140,6 +140,7 @@
   <ItemGroup>
     <ClInclude Include="Particle.h" />
     <ClInclude Include="QuadTreeNode.h" />
+    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="Vector2d.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
