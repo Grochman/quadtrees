@@ -1,20 +1,17 @@
 # quadtrees
-Work in progress n-body simulation. As for now the quadtree usage is my original "on peasant mind" idea.
+N-body simulation. Other branches may contain (if I haven’t deleted them then experimental and overengeneered) a quadtree data structure with the ability to update particle ownership without rebuilding the whole tree.
 
 ## features
-- quadtree data structure
-- gravity physics simulation
-- quadtree visualization
-
+- Barnes-Hut algorithm implementation
+- quadtree visualization (SFML)
+- simple multithreading (seperate barnach)
 
 ## preview
-![QuadTrees 2025-07-18 17-00-44](https://github.com/user-attachments/assets/33a3eff7-3499-4ce2-afe2-7d52f210b04d)
+![QuadTrees 2025-07-20 11-50-33](https://github.com/user-attachments/assets/8b4804a8-306c-4aad-b8e9-d5664dc895a6)
 
 
 
 ## todo
-- Barnes-Hut Algorithm
-- multithreading (also probably for drawing because SFML is stinky)
 - gpu utilization (probably OpenCL)
 - density based visualization
 
