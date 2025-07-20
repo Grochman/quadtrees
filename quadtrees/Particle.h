@@ -10,29 +10,22 @@ struct Particle {
     Vector2d acceleration;
     Vector2d velocity;
     QuadTreeNode* quad = nullptr;
-    inline static double max_velocity = 1.5;
+    double mass = 1;
 
-
-    Particle(const Vector2d& position) : position(position) {
+    Particle() {
+        position = { double(rand()) / RAND_MAX, double(rand()) / RAND_MAX };
         velocity = { double(rand()) / RAND_MAX - 0.5, double(rand()) / RAND_MAX - 0.5 };
+        mass = double(rand()) / RAND_MAX;
         acceleration = { 0,0 };
     };
 
     void move(double dt) {
         position += {velocity.x * dt, velocity.y * dt};
         velocity += {acceleration.x * dt, acceleration.y * dt};
-        if (velocity.length() > max_velocity) {
-            double k = max_velocity / velocity.length();
-            velocity.x *= k;
-            velocity.y *= k;
-        }
         acceleration = { 0,0 };
-        if (quad != nullptr) {
-            quad->updateParticleOwnership(this);
-        }
     }
 
-    void updateAcceletation(Vector2d acceleration) {
-        this->acceleration += acceleration;
+    void updateAcceletation(Vector2d force) {
+        this->acceleration += {force.x / mass, force.y / mass};
     }
 };
