@@ -4,38 +4,32 @@
 
 struct Vector2d {
     union {
-        double x;
+        double x = 0;
         double w;
     };
     union {
-        double y;
+        double y = 0;
         double h;
     };
-    
-    Vector2d() {};
-    Vector2d(double x, double y) : x(x), y(y) {};
-    double length() {
-        return sqrt(pow(x, 2) + pow(y, 2));
-    }
-
-    Vector2d distance(const Vector2d& other) {
-        return  Vector2d(other.x - this->x, other.y - this->y);
-    }
-
-    Vector2d unit() {
-        return Vector2d(x / length(), y / length());
-    }
-
-    void operator+=(const Vector2d& other) {
-        x += other.x;
-        y += other.y;
-    }
-
-    Vector2d operator+(const Vector2d& other) {
-        return Vector2d(x + other.x, y + other.y);
-    }
-
-    Vector2d operator/(const int value) {
-        return Vector2d(x / 2, y / 2);
-    }
 };
+
+double length(const Vector2d& vec) {
+    return sqrt(pow(vec.x, 2) + pow(vec.y, 2));
+}
+
+Vector2d distance(const Vector2d& vec1, const Vector2d& vec2) {
+    return  Vector2d{ vec2.x - vec1.x, vec2.y - vec1.y };
+}
+
+Vector2d unit(const Vector2d& vector) {
+    double l = length(vector);
+    return Vector2d{ vector.x / l, vector.y / l };
+}
+
+Vector2d sum(const Vector2d& vec1, const Vector2d& vec2) {
+    return Vector2d{ vec1.x + vec2.x, vec1.y + vec2.y };
+}
+
+Vector2d divide(const Vector2d& vec, const int value) {
+    return Vector2d{vec.x / value, vec.y / value};
+}

@@ -10,11 +10,11 @@
 
 void simulate(std::vector<Particle>& particles, QuadTreeNode& root, const double dt) {
     for (Particle& particle: particles) {
-        Vector2d force = root.getTotalForce(&particle);
-        particle.updateAcceletation(force);
+        Vector2d force = getTotalForce(&root, &particle);
+        updateAcceletation(&particle, force);
     }
     for (Particle& particle : particles) {
-        particle.move(dt);
+        move(&particle, dt);
     }
 }
 
@@ -26,9 +26,9 @@ void updateVisualisation(std::vector<Particle>& particles, std::vector<sf::Circl
 }
 
 void insertParticles(std::vector<Particle>& particles, QuadTreeNode& root) {
-    root.reset();
+    reset(&root);
     for (Particle& particle : particles) {
-        root.addParticle(&particle);
+        addParticle(&root, &particle);
     }
 }
 
@@ -50,6 +50,7 @@ int main()
     
     std::vector<sf::CircleShape> particlesVisual;
     for (Particle& particle: particles) {
+        initParticle(&particle);
         sf::CircleShape circle(particle.mass * 5.f);
         circle.setPosition(sf::Vector2f(particle.position.x * windowDimentions.x, particle.position.y * windowDimentions.y));
         circle.setFillColor(sf::Color(255, 255, 255));
@@ -68,7 +69,7 @@ int main()
         simulate(particles, root, time_elapsed * 0.01);
 
         window.clear(sf::Color::Black);
-        root.draw(window);
+        draw(&root, window);
         updateVisualisation(particles, particlesVisual, windowDimentions, window);
         window.display();
     }
