@@ -42,7 +42,6 @@ int main()
     for (int i = 0; i < particleCount; i++) {
         particles.emplace_back();
     }
-    
     QuadTreeNode root;
 
     const sf::Vector2u windowDimentions = { 600,600 };
@@ -52,7 +51,7 @@ int main()
     for (Particle& particle: particles) {
         sf::CircleShape circle(particle.mass * 5.f);
         circle.setPosition(sf::Vector2f(particle.position.x * windowDimentions.x, particle.position.y * windowDimentions.y));
-        circle.setFillColor(sf::Color(255, 255, 255));
+        circle.setFillColor(sf::Color::White);
         particlesVisual.push_back(circle);
     }
 

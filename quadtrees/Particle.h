@@ -20,8 +20,9 @@ struct Particle {
     };
 
     void move(double dt) {
+        velocity += {acceleration.x* dt/2, acceleration.y* dt/2};
         position += {velocity.x * dt, velocity.y * dt};
-        velocity += {acceleration.x * dt, acceleration.y * dt};
+        velocity += {acceleration.x * dt/2, acceleration.y * dt/2};
         acceleration = { 0,0 };
     }
 
