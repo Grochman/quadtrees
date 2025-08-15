@@ -3,14 +3,8 @@
 #include <cmath>
 
 struct Vector2d {
-    union {
-        double x = 0;
-        double w;
-    };
-    union {
-        double y = 0;
-        double h;
-    };
+    double x = 0;
+    double y = 0;
 };
 
 double length(const Vector2d& vec) {
