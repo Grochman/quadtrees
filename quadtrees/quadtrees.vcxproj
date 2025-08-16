@@ -134,11 +134,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="QuadTree.cpp" />
     <ClCompile Include="QuadTreeNode.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Particle.h" />
+    <ClInclude Include="QuadTree.h" />
     <ClInclude Include="QuadTreeNode.h" />
     <ClInclude Include="Vector2d.h" />
   </ItemGroup>

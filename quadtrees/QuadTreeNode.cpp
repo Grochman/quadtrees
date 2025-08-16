@@ -88,29 +88,6 @@ void QuadTreeNode::deleteLeaves() {
 	_bottomRight = nullptr;
 }
 
-void QuadTreeNode::draw(sf::RenderWindow& window) {	
-	sf::RectangleShape r(sf::Vector2f(_dimentions.x * window.getSize().x, _dimentions.y * window.getSize().y));
-	r.setPosition(sf::Vector2f( _position.x * window.getSize().x, _position.y * window.getSize().y));
-	r.setOutlineThickness(1.f);
-	r.setFillColor(sf::Color::Black);
-	r.setOutlineColor(sf::Color(50,50,50));
-	window.draw(r);
-	
-	if (_topLeft) {
-		_topLeft->draw(window);
-		_topRight->draw(window);
-		_bottomLeft->draw(window);
-		_bottomRight->draw(window);
-	}
-	if (!_parent) {
-		int radius = 5;
-		sf::CircleShape c(radius);
-		c.setPosition(sf::Vector2f(_massCenter.x * window.getSize().x - radius, _massCenter.y * window.getSize().y - radius));
-		c.setFillColor(sf::Color::Red);
-		window.draw(c);
-	}
-}
-
 void QuadTreeNode::reset() {
 	deleteLeaves();
 	_mass = 0;
@@ -154,4 +131,51 @@ bool QuadTreeNode::contains(Particle& const particle) {
 		return true;
 	}
 	return false;
+}
+
+void QuadTreeNode::draw(sf::RenderWindow& window) {
+	if (_parent) {
+		return;
+	}
+
+	Vector2d scale = { window.getSize().x / _dimentions.x, window.getSize().y / _dimentions.y };
+	drawBorder(window, scale);
+	drawParticles(window, scale);
+
+	int radius = 5;
+	sf::CircleShape c(radius);
+	c.setPosition(sf::Vector2f(_massCenter.x * window.getSize().x - radius, _massCenter.y * window.getSize().y - radius));
+	c.setFillColor(sf::Color::Red);
+	window.draw(c);
+}
+
+void QuadTreeNode::drawBorder(sf::RenderWindow& window, const Vector2d& scale) {
+	sf::RectangleShape r(sf::Vector2f(_dimentions.x  * scale.x, _dimentions.y  * scale.y));
+	r.setPosition(sf::Vector2f(_position.x * scale.x, _position.y * scale.y));
+	r.setOutlineThickness(1.f);
+	r.setFillColor(sf::Color::Black);
+	r.setOutlineColor(sf::Color(50, 50, 50));
+	window.draw(r);
+
+	if (_topLeft) {
+		_topLeft->drawBorder(window, scale);
+		_topRight->drawBorder(window, scale);
+		_bottomLeft->drawBorder(window, scale);
+		_bottomRight->drawBorder(window, scale);
+	}
+}
+
+void QuadTreeNode::drawParticles(sf::RenderWindow& window, const Vector2d& scale) {
+	if (_particle) {
+		sf::CircleShape c(_particle->mass * 5.f);
+		c.setPosition(sf::Vector2f(_particle->position.x * scale.x, _particle->position.y * scale.y));
+		c.setFillColor(sf::Color::White);
+		window.draw(c);
+	}
+	if (_topLeft) {
+		_topLeft->drawParticles(window, scale);
+		_topRight->drawParticles(window, scale);
+		_bottomLeft->drawParticles(window, scale);
+		_bottomRight->drawParticles(window, scale);
+	}
 }

@@ -26,6 +26,8 @@ class QuadTreeNode {
     void split();
     void insertParticleToChildren(Particle* const particle);
     bool contains(Particle& const particle);
+    void drawParticles(sf::RenderWindow& window, const Vector2d& scale);
+    void drawBorder(sf::RenderWindow& window, const Vector2d& scale);
 public:
     QuadTreeNode();
     ~QuadTreeNode();
