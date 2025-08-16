@@ -1,7 +1,5 @@
 ﻿#include <iostream>
-#include <math.h>
 #include <chrono>
-#include <algorithm>
 
 #include <SFML/Graphics.hpp>
 

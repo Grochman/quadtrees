@@ -1,4 +1,7 @@
 #pragma once
+
+#include <SFML/Graphics.hpp>
+
 #include "QuadTreeNode.h"
 #include "Particle.h"
 
@@ -15,4 +18,3 @@ public:
 	void simulate(const double dt);
 	void draw(sf::RenderWindow& window, bool transform = false, bool showGrid = false, bool showMassCenter = false);
 };
-

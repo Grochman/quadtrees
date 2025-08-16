@@ -1,11 +1,9 @@
 #pragma once
 
-#include <unordered_set>
-
-#include "Vector2d.h"
 #include <SFML/Graphics.hpp>
 
-struct Particle;
+#include "Vector2d.h"
+#include "Particle.h"
 
 class QuadTreeNode {
     Vector2d _position;
@@ -37,4 +35,3 @@ public:
     void reset();
     void draw(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation, bool showGrid, bool showMassCenter);
 };
-

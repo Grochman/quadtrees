@@ -1,10 +1,4 @@
-#include <math.h>
-#include <ranges>
-#include <iostream>
-
 #include "QuadTreeNode.h"
-#include "Particle.h"
-
 
 #define MIN 0.1
 
@@ -63,7 +57,6 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 		return;
 	}
 	else if (!_particle) {
-		particle->quad = this;
 		_particle = particle;
 		return;
 	}
