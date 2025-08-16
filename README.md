@@ -17,6 +17,7 @@ N-body simulation. Other branches may contain (if I haven’t deleted them then 
 - visualization with OpenGL (better performance plus SFML does not handle transparency well - no easy way to draw fading particle trails)
 - density based visualization
 - exploration of different integration methods (rk4)
+- colisions
 
 ## resources
 - https://arborjs.org/docs/barnes-hut
