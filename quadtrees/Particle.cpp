@@ -12,11 +12,14 @@ void initParticle(Particle* particle) {
 };
 
 void move(Particle* particle, double dt) {
+    particle->velocity.x += particle->acceleration.x * dt/2;
+    particle->velocity.y += particle->acceleration.y * dt/2;
+    
     particle->position.x += particle->velocity.x * dt;
     particle->position.y += particle->velocity.y * dt;
 
-    particle->velocity.x += particle->acceleration.x * dt;
-    particle->velocity.y += particle->acceleration.y * dt;
+    particle->velocity.x += particle->acceleration.x * dt/2;
+    particle->velocity.y += particle->acceleration.y * dt/2;
 
     particle->acceleration = { 0,0 };
 };

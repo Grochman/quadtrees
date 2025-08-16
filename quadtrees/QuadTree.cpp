@@ -27,15 +27,24 @@ void QuadTree::insert(std::vector<Particle>& particles) {
     for (Particle& particle : particles) {
         // go down the tree
         int idx = 0;
+        bool outOfScope = false;
         while (nodes[idx].leavesIdx != -1) {
-            int newIdx;
+            int newIdx = -1;
             for (int i = 0; i < 4; i++) {
                 unsigned int leafIdx = nodes[idx].leavesIdx + i;
                 if (contains(&nodes[leafIdx], &particle)) {
                     newIdx = leafIdx;
                 }
             }
+            if (newIdx == -1) {
+                outOfScope = true;
+                break;
+            }
             idx = newIdx;
+        }
+        // skip particles out of static scope
+        if (outOfScope) {
+            continue;
         }
         // split if needed
         while (nodes[idx].particle) {
@@ -136,4 +145,15 @@ Vector2d QuadTree::getTotalForce(Particle& particle) {
     }
 
     return totalForce;
+}
+
+void QuadTree::draw(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation) {
+    for (QuadTreeNode& node : nodes) {
+        sf::RectangleShape r(sf::Vector2f(node.width * scale.x, node.width * scale.y));
+        r.setPosition(sf::Vector2f(node.position.x * scale.x + translation.x, node.position.y * scale.y + translation.y));
+        r.setOutlineThickness(1.f);
+        r.setFillColor(sf::Color::Black);
+        r.setOutlineColor(sf::Color(50, 50, 50));
+        window.draw(r);
+    }
 }
