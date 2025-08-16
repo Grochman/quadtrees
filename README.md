@@ -21,3 +21,4 @@ N-body simulation. Other branches may contain (if I haven’t deleted them then 
 ## resources
 - https://arborjs.org/docs/barnes-hut
 - https://courses.physics.ucsd.edu/2019/Winter/physics141/Assignments/leapfrog.pdf
+- https://cs.wmich.edu/gupta/teaching/cs5260/5260Sp15web/studentProjects/white+loftus%20nBodySimulations/nbody-problem.pdf
