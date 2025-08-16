@@ -19,14 +19,10 @@ int main()
         initParticle(&particles[i]);
     }
     
-    QuadTree tree;
+    QuadTree tree(particles);
     
     const sf::Vector2u windowDimentions = { 600,600 };
     sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
-
-    Vector2d scale = { window.getSize().x / 1., window.getSize().y / 1. };
-    Vector2d translation = { 0. * scale.x , 0. * scale.y };
-    double particleScale = 1;
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -36,27 +32,15 @@ int main()
         std::cout << "fps: " << 1 / timeElapsed << '\n';
         begin = end;
 
-        tree.reset();
-        tree.insert(particles);
+        //tree.computeBounds(); <- doesnt work yet
+        tree.build();
         tree.calculateMass();
-
-        for (Particle& particle : particles) {
-            Vector2d force = tree.getTotalForce(particle);
-            updateAcceletation(&particle, force);
-        }
-        for (Particle& particle : particles) {
-            move(&particle, timeElapsed* 0.07);
-        }
-
+        // Apprioximately sort the bodies by spatial distnce missing
+        tree.computeForces();
+        tree.updatePositions(timeElapsed * 0.1);
+        
         window.clear(sf::Color::Black);
-        tree.draw(window, scale, translation);
-        for (Particle& particle : particles) {
-            double radius = std::max(particle.mass * 5.f * particleScale, 1.);
-            sf::CircleShape c(radius);
-            c.setPosition(sf::Vector2f(particle.position.x * scale.x - radius + translation.x, particle.position.y * scale.y - radius + translation.y));
-            c.setFillColor(sf::Color::White);
-            window.draw(c);
-        }
+        tree.draw(window, false, true, true);
         window.display();
     }
 

@@ -11,15 +11,18 @@
 
 class QuadTree
 {
-    std::vector<QuadTreeNode> nodes;
+    std::vector<QuadTreeNode> _nodes;
+    std::vector<Particle> _particles;
 
     Vector2d calculateForce(Vector2d& distance, const double mass, Particle* particle);
+    
 public:
-    QuadTree();
-    void reset();
+    QuadTree(const std::vector<Particle>& particles);
     void computeBounds();
-    void insert(std::vector<Particle>& particles);
+    void build();
     void calculateMass();
+    void computeForces();
+    void updatePositions(double dt);
     Vector2d getTotalForce(Particle& particle);
-    void draw(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation);
+    void draw(sf::RenderWindow& window, bool transform = false, bool showGrid = false, bool showMassCenter = false);
 };
