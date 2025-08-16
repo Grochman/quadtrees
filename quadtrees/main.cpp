@@ -11,7 +11,7 @@
 int main()
 {
     srand(time(NULL));
-    const unsigned int particleCount = 30;
+    const unsigned int particleCount = 200;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
@@ -32,6 +32,7 @@ int main()
         std::cout << "fps: " << 1 / timeElapsed << '\n';
         begin = end;
 
+        tree.computeBounds();
         tree.build();
         tree.simulate(timeElapsed * 0.01);
         

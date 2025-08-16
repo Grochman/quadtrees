@@ -26,14 +26,15 @@ class QuadTreeNode {
     void split();
     void insertParticleToChildren(Particle* const particle);
     bool contains(Particle& const particle);
-    void drawParticles(sf::RenderWindow& window, const Vector2d& scale);
-    void drawBorder(sf::RenderWindow& window, const Vector2d& scale);
+    void drawParticles(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation);
+    void drawBorder(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation);
 public:
     QuadTreeNode();
     ~QuadTreeNode();
     void addParticle(Particle* const particle);
     Vector2d getTotalForce(Particle* const particle);
+    void setBounds(Vector2d& position, Vector2d& dimentions);
     void reset();
-    void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation, bool showGrid, bool showMassCenter);
 };
 
