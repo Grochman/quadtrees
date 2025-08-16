@@ -139,7 +139,6 @@ void QuadTreeNode::draw(sf::RenderWindow& window, const Vector2d& scale, const V
 	if (showGrid) {
 		drawBorder(window, scale, translation);
 	}
-	drawParticles(window, scale, translation);
 
 	if (showMassCenter) {
 		int radius = 5;
@@ -163,21 +162,5 @@ void QuadTreeNode::drawBorder(sf::RenderWindow& window, const Vector2d& scale, c
 		_topRight->drawBorder(window, scale, translation);
 		_bottomLeft->drawBorder(window, scale, translation);
 		_bottomRight->drawBorder(window, scale, translation);
-	}
-}
-
-void QuadTreeNode::drawParticles(sf::RenderWindow& window, const Vector2d& scale, const Vector2d& translation) {
-	if (_particle) {
-		double radius = _particle->mass * 5.f;
-		sf::CircleShape c(radius);
-		c.setPosition(sf::Vector2f(_particle->position.x * scale.x - radius + translation.x, _particle->position.y * scale.y - radius + translation.y));
-		c.setFillColor(sf::Color::White);
-		window.draw(c);
-	}
-	if (_topLeft) {
-		_topLeft->drawParticles(window, scale, translation);
-		_topRight->drawParticles(window, scale, translation);
-		_bottomLeft->drawParticles(window, scale, translation);
-		_bottomRight->drawParticles(window, scale, translation);
 	}
 }

@@ -45,13 +45,25 @@ void QuadTree::computeBounds() {
 void QuadTree::draw(sf::RenderWindow& window, bool transform, bool showGrid, bool showMassCenter) {
     Vector2d scale;
     Vector2d translation;
+    double particleScale;
     if (transform) {
         scale = { window.getSize().x / _dimentions.x, window.getSize().y / _dimentions.y };
         translation = { -_origin.x * scale.x , -_origin.y * scale.y };
+        particleScale = 1 / _dimentions.x;
     }
     else {
         scale = { window.getSize().x / 1., window.getSize().y / 1. };
         translation = { 0. * scale.x , 0. * scale.y };
+        particleScale = 1;
     }
+
     _root.draw(window, scale, translation, showGrid, showMassCenter);
+
+    for (Particle& particle : _particles) {
+        double radius = std::max(particle.mass * 5.f * particleScale, 1.);
+        sf::CircleShape c(radius);
+        c.setPosition(sf::Vector2f(particle.position.x * scale.x - radius + translation.x, particle.position.y * scale.y - radius + translation.y));
+        c.setFillColor(sf::Color::White);
+        window.draw(c);
+    }
 }
