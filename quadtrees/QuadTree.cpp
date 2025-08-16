@@ -1,5 +1,6 @@
 #include "QuadTree.h"
 
+#include <iostream>
 #include <stack>
 
 
@@ -25,9 +26,12 @@ void QuadTree::insert(std::vector<Particle>& particles) {
     nodes.push_back(QuadTreeNode());
     // while particles insert
     for (Particle& particle : particles) {
+        if (!contains(&nodes[0], &particle)) {
+            continue;
+        }
+
         // go down the tree
         int idx = 0;
-        bool outOfScope = false;
         while (nodes[idx].leavesIdx != -1) {
             int newIdx = -1;
             for (int i = 0; i < 4; i++) {
@@ -36,21 +40,15 @@ void QuadTree::insert(std::vector<Particle>& particles) {
                     newIdx = leafIdx;
                 }
             }
-            if (newIdx == -1) {
-                outOfScope = true;
-                break;
-            }
             idx = newIdx;
         }
-        // skip particles out of static scope
-        if (outOfScope) {
-            continue;
-        }
+
         // split if needed
         while (nodes[idx].particle) {
             nodes[idx].leavesIdx = nodes.size();
             Particle* p = nodes[idx].particle;
             nodes[idx].particle = nullptr;
+
             for (int i = 0; i < 4; i++) {
                 nodes.push_back(QuadTreeNode());
                 int newIdx = nodes.size() - 1;
@@ -74,9 +72,10 @@ void QuadTree::insert(std::vector<Particle>& particles) {
             }
             // go to correct quad
             for (int i = 0; i < 4; i++) {
-                unsigned int leafIdx = nodes[idx].leavesIdx + i;
+                int leafIdx = nodes[idx].leavesIdx + i;
                 if (contains(&nodes[leafIdx], &particle)) {
                     idx = leafIdx;
+                    break;
                 }
             }
         }

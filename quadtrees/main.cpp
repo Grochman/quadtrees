@@ -10,7 +10,7 @@
 int main()
 {
     srand(time(NULL));
-    const unsigned int particleCount = 5;
+    const unsigned int particleCount = 20;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
