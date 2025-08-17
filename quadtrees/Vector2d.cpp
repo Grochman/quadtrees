@@ -20,6 +20,6 @@ Vector2d sum(const Vector2d& vec1, const Vector2d& vec2) {
     return Vector2d{ vec1.x + vec2.x, vec1.y + vec2.y };
 }
 
-Vector2d divide(const Vector2d& vec, const int value) {
+Vector2d divide(const Vector2d& vec, const double value) {
     return Vector2d{ vec.x / value, vec.y / value };
 }

@@ -10,7 +10,7 @@
 int main()
 {
     srand(time(NULL));
-    const unsigned int particleCount = 20;
+    const unsigned int particleCount = 100;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
@@ -32,15 +32,15 @@ int main()
         std::cout << "fps: " << 1 / timeElapsed << '\n';
         begin = end;
 
-        //tree.computeBounds(); // <- doesnt work yet
+        tree.computeBounds();
         tree.build();
         tree.calculateMass();
         // Apprioximately sort the bodies by spatial distnce missing
         tree.computeForces();
-        tree.updatePositions(timeElapsed * 0.1);
+        tree.updatePositions(timeElapsed * 0.01);
         
         window.clear(sf::Color::Black);
-        tree.draw(window, false, true, true);
+        tree.draw(window, false, true, false);
         window.display();
     }
 

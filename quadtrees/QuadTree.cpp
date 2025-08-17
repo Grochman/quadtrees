@@ -4,6 +4,7 @@
 #include <stack>
 
 #define MIN 0.1
+#define ROUNDING_ERROR_CORRECTION 0.0001
 
 QuadTree::QuadTree(const std::vector<Particle>& particles) 
     : _particles(particles){};
@@ -30,18 +31,14 @@ void QuadTree::computeBounds() {
         top = std::min(particle.position.y, top);
         bottom = std::max(particle.position.y, bottom);
     }
-
+    
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
-    //_nodes[0].width = std::max(right - left, bottom - top);
-    _nodes[0].dimentions.x = right - left;
-    _nodes[0].dimentions.y = bottom - top;
-}
+    _nodes[0].dimentions.x = right - left + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].dimentions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
+    }
 
 void QuadTree::build() {
-    _nodes.clear();
-    _nodes.push_back(QuadTreeNode());
-
     // while particles insert
     for (Particle& particle : _particles) {
         if (!contains(&_nodes[0], &particle)) {
@@ -51,7 +48,7 @@ void QuadTree::build() {
         // go down the tree
         int idx = 0;
         while (_nodes[idx].leavesIdx != -1) {
-            int newIdx = -1;
+            int newIdx;
             for (int i = 0; i < 4; i++) {
                 unsigned int leafIdx = _nodes[idx].leavesIdx + i;
                 if (contains(&_nodes[leafIdx], &particle)) {
