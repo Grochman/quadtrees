@@ -9,9 +9,7 @@ QuadTreeNode::QuadTreeNode()
 	: _position({ 0,0 }), _dimentions({ 1,1 }) {}
 
 QuadTreeNode::~QuadTreeNode() {
-	if (_topLeft) {
-		deleteLeaves();
-	}
+	deleteLeaves();
 }
 
 void QuadTreeNode::setBounds(Vector2d& position, Vector2d& dimentions) {
@@ -22,18 +20,18 @@ void QuadTreeNode::setBounds(Vector2d& position, Vector2d& dimentions) {
 void QuadTreeNode::insertParticleToChildren(Particle* const particle) {
 	if (particle->position.x > _position.x + _dimentions.w / 2) {
 		if (particle->position.y > _position.y + _dimentions.h / 2) {
-			_bottomRight->addParticle(particle);
+			_leaves[3]->addParticle(particle);
 		}
 		else {
-			_topRight->addParticle(particle);
+			_leaves[1]->addParticle(particle);
 		}
 	}
 	else {
 		if (particle->position.y > _position.y + _dimentions.h / 2) {
-			_bottomLeft->addParticle(particle);
+			_leaves[2]->addParticle(particle);
 		}
 		else {
-			_topLeft->addParticle(particle);
+			_leaves[0]->addParticle(particle);
 		}
 	}
 }
@@ -52,7 +50,7 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 		return;
 	}
 
-	if (_topLeft != nullptr) {
+	if (_leaves[0]) {
 		insertParticleToChildren(particle);
 		return;
 	}
@@ -69,21 +67,17 @@ void QuadTreeNode::addParticle(Particle* const particle) {
 
 void QuadTreeNode::split() {
 	Vector2d new_dimentions = _dimentions / 2;
-	_topLeft = new QuadTreeNode(Vector2d(_position.x, _position.y), new_dimentions, this);
-	_bottomLeft = new QuadTreeNode(Vector2d(_position.x, _position.y + _dimentions.h / 2), new_dimentions, this);
-	_topRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2, _position.y), new_dimentions, this);
-	_bottomRight = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2 , _position.y + _dimentions.h / 2), new_dimentions, this);
+	_leaves[0] = new QuadTreeNode(Vector2d(_position.x, _position.y), new_dimentions, this);
+	_leaves[2] = new QuadTreeNode(Vector2d(_position.x, _position.y + _dimentions.h / 2), new_dimentions, this);
+	_leaves[1] = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2, _position.y), new_dimentions, this);
+	_leaves[3] = new QuadTreeNode(Vector2d(_position.x + _dimentions.w / 2 , _position.y + _dimentions.h / 2), new_dimentions, this);
 }
 
 void QuadTreeNode::deleteLeaves() {
-	delete _topLeft;
-	delete _bottomLeft;
-	delete _topRight;
-	delete _bottomRight;
-	_topLeft = nullptr;
-	_bottomLeft = nullptr;
-	_topRight = nullptr;
-	_bottomRight = nullptr;
+	for (QuadTreeNode*& leaf : _leaves) {
+		delete leaf;
+		leaf = nullptr;
+	}
 }
 
 void QuadTreeNode::reset() {
@@ -107,11 +101,10 @@ Vector2d QuadTreeNode::getTotalForce(Particle* const particle) {
 		Vector2d r = particle->position.distance(_massCenter);
 		return calculateForce(r, _mass, particle);
 	}
-	else if (_topLeft) {
-		totalForce += _topLeft->getTotalForce(particle);
-		totalForce += _topRight->getTotalForce(particle);
-		totalForce += _bottomLeft->getTotalForce(particle);
-		totalForce += _bottomRight->getTotalForce(particle);
+	else if (_leaves[0]) {
+		for (QuadTreeNode*& leaf : _leaves) {
+			totalForce += leaf->getTotalForce(particle);
+		}
 	}
 	return totalForce;
 }
@@ -157,10 +150,9 @@ void QuadTreeNode::drawBorder(sf::RenderWindow& window, const Vector2d& scale, c
 	r.setOutlineColor(sf::Color(50, 50, 50));
 	window.draw(r);
 
-	if (_topLeft) {
-		_topLeft->drawBorder(window, scale, translation);
-		_topRight->drawBorder(window, scale, translation);
-		_bottomLeft->drawBorder(window, scale, translation);
-		_bottomRight->drawBorder(window, scale, translation);
+	if (_leaves[0]) {
+		for (QuadTreeNode*& leaf : _leaves) {
+			leaf->drawBorder(window, scale, translation);
+		}
 	}
 }

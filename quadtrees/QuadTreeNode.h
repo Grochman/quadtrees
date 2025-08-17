@@ -9,10 +9,7 @@ class QuadTreeNode {
     Vector2d _position;
     Vector2d _dimentions;
     QuadTreeNode* _parent = nullptr;
-    QuadTreeNode* _topLeft = nullptr;
-    QuadTreeNode* _topRight = nullptr;
-    QuadTreeNode* _bottomLeft = nullptr;
-    QuadTreeNode* _bottomRight = nullptr;
+    QuadTreeNode* _leaves[4] = { nullptr };
     Particle* _particle = nullptr;
     double _mass = 0;
     static constexpr double _thresshold = 0.5;
