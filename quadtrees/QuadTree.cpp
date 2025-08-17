@@ -33,7 +33,9 @@ void QuadTree::computeBounds() {
 
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
-    _nodes[0].width = std::max(right - left, bottom - top);
+    //_nodes[0].width = std::max(right - left, bottom - top);
+    _nodes[0].dimentions.x = right - left;
+    _nodes[0].dimentions.y = bottom - top;
 }
 
 void QuadTree::build() {
@@ -68,19 +70,19 @@ void QuadTree::build() {
             for (int i = 0; i < 4; i++) {
                 _nodes.push_back(QuadTreeNode());
                 int newIdx = _nodes.size() - 1;
-                _nodes[newIdx].width = _nodes[idx].width / 2;
+                _nodes[newIdx].dimentions = divide(_nodes[idx].dimentions, 2);
                 switch (i) {
                 case 0:
                     _nodes[newIdx].position = _nodes[idx].position;
                     break;
                 case 1:
-                    _nodes[newIdx].position = { _nodes[idx].position.x + _nodes[newIdx].width, _nodes[idx].position.y };
+                    _nodes[newIdx].position = { _nodes[idx].position.x + _nodes[newIdx].dimentions.x, _nodes[idx].position.y };
                     break;
                 case 2:
-                    _nodes[newIdx].position = { _nodes[idx].position.x, _nodes[idx].position.y + _nodes[newIdx].width};
+                    _nodes[newIdx].position = { _nodes[idx].position.x, _nodes[idx].position.y + _nodes[newIdx].dimentions.y};
                     break;
                 default:
-                    _nodes[newIdx].position = { _nodes[idx].position.x + _nodes[newIdx].width, _nodes[idx].position.y + _nodes[newIdx].width };
+                    _nodes[newIdx].position = { _nodes[idx].position.x + _nodes[newIdx].dimentions.x, _nodes[idx].position.y + _nodes[newIdx].dimentions.y };
                 }
                 if (contains(&_nodes[newIdx], p)) {
                     _nodes[newIdx].particle = p;
@@ -146,7 +148,7 @@ Vector2d QuadTree::getTotalForce(Particle& particle) {
             totalForce = sum(totalForce, calculateForce(r, _nodes[i].particle->mass, &particle));
             continue;
         }
-        const double s = _nodes[i].width;
+        const double s = _nodes[i].dimentions.x;
         const double d = length(distance(particle.position, _nodes[i].massCenter));
         if (s / d < 0.5) {
             Vector2d r = distance(particle.position, _nodes[i].massCenter);
@@ -182,9 +184,9 @@ void QuadTree::draw(sf::RenderWindow& window, bool transform, bool showGrid, boo
     Vector2d translation;
     double particleScale;
     if (transform) {
-        scale = { window.getSize().x / _nodes[0].width, window.getSize().y / _nodes[0].width };
+        scale = { window.getSize().x / _nodes[0].dimentions.x, window.getSize().y / _nodes[0].dimentions.y };
         translation = { -_nodes[0].position.x * scale.x , -_nodes[0].position.y * scale.y};
-        particleScale = 1 / _nodes[0].width;
+        particleScale = 1 / _nodes[0].dimentions.x;
     }
     else {
         scale = { window.getSize().x / 1., window.getSize().y / 1. };
@@ -194,7 +196,7 @@ void QuadTree::draw(sf::RenderWindow& window, bool transform, bool showGrid, boo
     
     if (showGrid) {
         for (QuadTreeNode& node : _nodes) {
-            sf::RectangleShape r(sf::Vector2f(node.width * scale.x, node.width * scale.y));
+            sf::RectangleShape r(sf::Vector2f(node.dimentions.x * scale.x, node.dimentions.y * scale.y));
             r.setPosition(sf::Vector2f(node.position.x * scale.x + translation.x, node.position.y * scale.y + translation.y));
             r.setOutlineThickness(1.f);
             r.setFillColor(sf::Color::Black);

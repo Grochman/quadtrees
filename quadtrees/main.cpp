@@ -32,7 +32,7 @@ int main()
         std::cout << "fps: " << 1 / timeElapsed << '\n';
         begin = end;
 
-        //tree.computeBounds(); <- doesnt work yet
+        //tree.computeBounds(); // <- doesnt work yet
         tree.build();
         tree.calculateMass();
         // Apprioximately sort the bodies by spatial distnce missing

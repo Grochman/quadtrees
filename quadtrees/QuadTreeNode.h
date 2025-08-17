@@ -6,7 +6,7 @@
 
 struct QuadTreeNode {
 	Vector2d position = {0,0};
-	double width = 1;
+	Vector2d dimentions = { 1,1 };
 	int leavesIdx = -1;
 	Particle* particle = nullptr;
     
