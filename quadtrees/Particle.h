@@ -15,6 +15,13 @@ struct Particle {
         acceleration = { 0,0 };
     };
 
+    Particle(Vector2d position, Vector2d velocity, double mass) {
+        this->position = position;
+        this->velocity = velocity;
+        this->mass = mass;
+        acceleration = { 0,0 };
+    };
+
     void move(double dt) {
         velocity += {acceleration.x* dt / 2, acceleration.y* dt / 2};
         position += {velocity.x* dt, velocity.y* dt};
