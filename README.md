@@ -17,7 +17,7 @@ N-body simulation. Other branches may contain (if I haven’t deleted them then 
 </p>
 
 ## todo
-- gpu utilization (OpenCL / SYCL)
+- gpu utilization (OpenCL / webGPU / openMP)
 - visualization improvements:
   - OpenGL
   - particle trails
