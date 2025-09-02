@@ -3,23 +3,23 @@
 #include <cmath>
 
 
-double length(const Vector2d& vec) {
+float length(const float2& vec) {
     return sqrt(pow(vec.x, 2) + pow(vec.y, 2));
 }
 
-Vector2d distance(const Vector2d& vec1, const Vector2d& vec2) {
-    return  Vector2d{ vec2.x - vec1.x, vec2.y - vec1.y };
+float2 distance(const float2& vec1, const float2& vec2) {
+    return  float2{ vec2.x - vec1.x, vec2.y - vec1.y };
 }
 
-Vector2d unit(const Vector2d& vector) {
-    double l = length(vector);
-    return Vector2d{ vector.x / l, vector.y / l };
+float2 unit(const float2& vector) {
+    float l = length(vector);
+    return float2{ vector.x / l, vector.y / l };
 }
 
-Vector2d sum(const Vector2d& vec1, const Vector2d& vec2) {
-    return Vector2d{ vec1.x + vec2.x, vec1.y + vec2.y };
+float2 sum(const float2& vec1, const float2& vec2) {
+    return float2{ vec1.x + vec2.x, vec1.y + vec2.y };
 }
 
-Vector2d divide(const Vector2d& vec, const double value) {
-    return Vector2d{ vec.x / value, vec.y / value };
+float2 divide(const float2& vec, const float value) {
+    return float2{ vec.x / value, vec.y / value };
 }

@@ -14,7 +14,7 @@ class QuadTree
     std::vector<QuadTreeNode> _nodes;
     std::vector<Particle> _particles;
 
-    Vector2d calculateForce(Vector2d& distance, const double mass, Particle* particle);
+    float2 calculateForce(float2& distance, const float mass, Particle* particle);
     
 public:
     QuadTree(const std::vector<Particle>& particles);
@@ -23,6 +23,6 @@ public:
     void calculateMass();
     void computeForces();
     void updatePositions(double dt);
-    Vector2d getTotalForce(Particle& particle);
+    float2 getTotalForce(Particle& particle);
     void draw(sf::RenderWindow& window, bool transform = false, bool showGrid = false, bool showMassCenter = false);
 };

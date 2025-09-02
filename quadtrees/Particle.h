@@ -6,12 +6,12 @@
 struct QuadTreeNode;
 
 struct Particle {
-    Vector2d position;
-    Vector2d velocity;
-    Vector2d acceleration;
+    float2 position;
+    float2 velocity;
+    float2 acceleration;
     float mass = 1;
 };
 
 void initParticle(Particle* particle);
 void move(Particle* particle, double dt);
-void updateAcceletation(Particle* particle, Vector2d force);
+void updateAcceletation(Particle* particle, float2 force);

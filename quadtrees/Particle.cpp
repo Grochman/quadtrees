@@ -5,10 +5,10 @@
 
 
 void initParticle(Particle* particle) {
-    particle->position = { double(rand()) / RAND_MAX, double(rand()) / RAND_MAX };
-    particle->velocity = { double(rand()) / RAND_MAX - 0.5, double(rand()) / RAND_MAX - 0.5 };
+    particle->position = { float(rand()) / RAND_MAX, float(rand()) / RAND_MAX };
+    particle->velocity = { float(rand()) / RAND_MAX - 0.5f, float(rand()) / RAND_MAX - 0.5f };
     particle->mass = float(rand()) / RAND_MAX;
-    particle->acceleration = { 0,0 };
+    particle->acceleration = { .0f,.0f };
 };
 
 void move(Particle* particle, double dt) {
@@ -24,7 +24,7 @@ void move(Particle* particle, double dt) {
     particle->acceleration = { 0,0 };
 };
 
-void updateAcceletation(Particle* particle, Vector2d force) {
+void updateAcceletation(Particle* particle, float2 force) {
     particle->acceleration.x += force.x / particle->mass;
     particle->acceleration.y += force.y / particle->mass;
 };
