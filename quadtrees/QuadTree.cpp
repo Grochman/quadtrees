@@ -6,7 +6,7 @@
 #define MIN 0.1f
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 
-QuadTree::QuadTree(const std::vector<Particle>& particles) 
+QuadTree::QuadTree(std::vector<Particle>& particles) 
     : _particles(particles){};
 
 float2 QuadTree::calculateForce(float2& distance, const float mass, Particle* particle) {
@@ -62,6 +62,10 @@ void QuadTree::build() {
         while (_nodes[idx].particle) {
             _nodes[idx].leavesIdx = _nodes.size();
             Particle* p = _nodes[idx].particle;
+            if (p->position.x == particle.position.x && p->position.y == particle.position.y) {
+                std::cout << "two particles with the exact same position";
+                return;
+            }
             _nodes[idx].particle = nullptr;
 
             for (int i = 0; i < 4; i++) {

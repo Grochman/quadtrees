@@ -1,6 +1,6 @@
 #pragma once
 
-struct float2 {
+struct alignas(8) float2 {
     float x = 0;
     float y = 0;
 };

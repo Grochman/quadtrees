@@ -9,7 +9,8 @@ struct Particle {
     float2 position;
     float2 velocity;
     float2 acceleration;
-    float mass = 1;
+    float mass = 1.f;
+    float _pad;
 };
 
 void initParticle(Particle* particle);

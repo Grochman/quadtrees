@@ -12,12 +12,12 @@
 class QuadTree
 {
     std::vector<QuadTreeNode> _nodes;
-    std::vector<Particle> _particles;
+    std::vector<Particle>& _particles;
 
     float2 calculateForce(float2& distance, const float mass, Particle* particle);
     
 public:
-    QuadTree(const std::vector<Particle>& particles);
+    QuadTree(std::vector<Particle>& particles);
     void computeBounds();
     void build();
     void calculateMass();
