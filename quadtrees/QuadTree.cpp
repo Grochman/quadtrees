@@ -1,5 +1,5 @@
 #include "QuadTree.h"
-
+#include <CL/cl.h>
 #include <iostream>
 #include <stack>
 
@@ -7,7 +7,44 @@
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 
 QuadTree::QuadTree(std::vector<Particle>& particles) 
-    : _particles(particles){};
+    : _particles(particles){
+    cl_platform_id platfmors;
+    clGetPlatformIDs(1, &platfmors, nullptr);
+    cl_device_id device;
+    clGetDeviceIDs(platfmors, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
+
+    
+    _context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, nullptr);
+    _queue = clCreateCommandQueueWithProperties(_context, device, nullptr, nullptr);
+    
+    _buffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _particles.size() * sizeof(Particle), nullptr, nullptr);
+    _globalDimensions = _particles.size();
+    
+    const char* source = {
+        "typedef struct {\n"
+        "    float2 position;\n"
+        "    float2 velocity;\n"
+        "    float2 acceleration;\n"
+        "    float mass;\n"
+        "    float _pad;\n"
+        "} Particle;\n"
+        "__kernel void updatePositions(__global Particle * particles, float dt) {\n"
+        "   int id = get_global_id(0);\n"
+        "   particles[id].velocity.x += particles[id].acceleration.x * dt * 0.5f;\n"
+        "   particles[id].velocity.y += particles[id].acceleration.y * dt * 0.5f;\n"
+        "   particles[id].position.x += particles[id].velocity.x * dt;\n"
+        "   particles[id].position.y += particles[id].velocity.y * dt;\n"
+        "   particles[id].velocity.x += particles[id].acceleration.x * dt * 0.5f;\n"
+        "   particles[id].velocity.y += particles[id].acceleration.y * dt * 0.5f;\n"
+        "   particles[id].acceleration.x = 0.0f;\n"
+        "   particles[id].acceleration.y = 0.0f;\n"
+        "}\n"
+    };
+
+    cl_program program = clCreateProgramWithSource(_context, 1, (const char**)&source, nullptr, nullptr);
+    cl_int status = clBuildProgram(program, 0, nullptr, nullptr, nullptr, nullptr);
+    _updatePositionsKernel = clCreateKernel(program, "updatePositions", nullptr);
+};
 
 float2 QuadTree::calculateForce(float2& distance, const float mass, Particle* particle) {
     float2 unit_vector = unit(distance);
@@ -174,10 +211,13 @@ void QuadTree::computeForces() {
     }
 }
 
-void QuadTree::updatePositions(double dt) {
-    for (Particle& particle : _particles) {
-        move(&particle, dt);
-    }
+void QuadTree::updatePositions(float dt) {
+    clEnqueueWriteBuffer(_queue, _buffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
+    clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem), &_buffer);
+    clSetKernelArg(_updatePositionsKernel, 1, sizeof(float), &dt);
+    clEnqueueNDRangeKernel(_queue, _updatePositionsKernel, 1, nullptr, &_globalDimensions, nullptr, 0, nullptr, nullptr);
+    clEnqueueReadBuffer(_queue, _buffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
+    clFinish(_queue);
 }
 
 void QuadTree::draw(sf::RenderWindow& window, bool transform, bool showGrid, bool showMassCenter) {
