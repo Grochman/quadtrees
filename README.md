@@ -17,7 +17,7 @@ N-body simulation. Other branches may contain (if I haven’t deleted them then 
 </p>
 
 ## todo
-- gpu utilization (OpenCL / webGPU / openMP)
+- OpenCL acceleration (maby later also openMp as a cpu acc option)
 - visualization improvements:
   - OpenGL
   - particle trails
