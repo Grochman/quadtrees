@@ -2,6 +2,7 @@
 #include <CL/cl.h>
 #include <iostream>
 #include <stack>
+#include <fstream>
 
 #define MIN 0.1f
 #define ROUNDING_ERROR_CORRECTION 0.0001f
@@ -19,30 +20,21 @@ QuadTree::QuadTree(std::vector<Particle>& particles)
     
     _buffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _particles.size() * sizeof(Particle), nullptr, nullptr);
     _globalDimensions = _particles.size();
+    std::ifstream file("kernels/updatePositions.cl");
+    std::string sourceString((std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>());
+    const char* source = sourceString.c_str();
     
-    const char* source = {
-        "typedef struct {\n"
-        "    float2 position;\n"
-        "    float2 velocity;\n"
-        "    float2 acceleration;\n"
-        "    float mass;\n"
-        "    float _pad;\n"
-        "} Particle;\n"
-        "__kernel void updatePositions(__global Particle * particles, float dt) {\n"
-        "   int id = get_global_id(0);\n"
-        "   particles[id].velocity.x += particles[id].acceleration.x * dt * 0.5f;\n"
-        "   particles[id].velocity.y += particles[id].acceleration.y * dt * 0.5f;\n"
-        "   particles[id].position.x += particles[id].velocity.x * dt;\n"
-        "   particles[id].position.y += particles[id].velocity.y * dt;\n"
-        "   particles[id].velocity.x += particles[id].acceleration.x * dt * 0.5f;\n"
-        "   particles[id].velocity.y += particles[id].acceleration.y * dt * 0.5f;\n"
-        "   particles[id].acceleration.x = 0.0f;\n"
-        "   particles[id].acceleration.y = 0.0f;\n"
-        "}\n"
-    };
-
     cl_program program = clCreateProgramWithSource(_context, 1, (const char**)&source, nullptr, nullptr);
     cl_int status = clBuildProgram(program, 0, nullptr, nullptr, nullptr, nullptr);
+    if (status != CL_SUCCESS) {
+        size_t logSize = 0;
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &logSize);
+        std::string log(logSize, '\0');
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logSize, log.data(), nullptr);
+        std::cerr << log << std::endl;
+        abort();
+    }
     _updatePositionsKernel = clCreateKernel(program, "updatePositions", nullptr);
 };
 
@@ -200,7 +192,7 @@ float2 QuadTree::getTotalForce(Particle& particle) {
             idxs.push(_nodes[i].leavesIdx + 3);
         }
     }
-
+    
     return totalForce;
 }
 
