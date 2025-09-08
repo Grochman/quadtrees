@@ -15,11 +15,13 @@ class QuadTree
     std::vector<Particle>& _particles;
     cl_context _context;
     cl_command_queue _queue;
-    cl_mem _buffer;
+    cl_mem _particleBuffer;
+    cl_mem _nodeBuffer;
     size_t _globalDimensions;
     cl_kernel _updatePositionsKernel;
-    float2 calculateForce(float2& distance, const float mass, Particle* particle);
-    
+    cl_kernel _computeForcesKernel;
+    void checkError(cl_int status, cl_program program, cl_device_id device);
+    cl_kernel buildKernel(cl_device_id device, const char* sourceFile, const char* functionName);
 public:
     QuadTree(std::vector<Particle>& particles);
     void computeBounds();
@@ -27,6 +29,5 @@ public:
     void calculateMass();
     void computeForces();
     void updatePositions(float dt);
-    float2 getTotalForce(int particleIdx);
     void draw(sf::RenderWindow& window, bool transform = false, bool showGrid = false, bool showMassCenter = false);
 };
