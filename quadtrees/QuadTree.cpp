@@ -69,7 +69,8 @@ void QuadTree::computeBounds() {
 
 void QuadTree::build() {
     // while particles insert
-    for (Particle& particle : _particles) {
+    for (int i = 0; i < _particles.size(); i++){
+        Particle& particle = _particles[i];
         if (!contains(&_nodes[0], &particle)) {
             continue;
         }
@@ -88,14 +89,18 @@ void QuadTree::build() {
         }
 
         // split if needed
-        while (_nodes[idx].particle) {
+        while (_nodes[idx].particleIdx != -1) {
             _nodes[idx].leavesIdx = _nodes.size();
-            Particle* p = _nodes[idx].particle;
+            
+            int particleIdx = _nodes[idx].particleIdx;
+            Particle* p = &_particles[particleIdx];
+            
             if (p->position.x == particle.position.x && p->position.y == particle.position.y) {
                 std::cout << "two particles with the exact same position";
                 return;
             }
-            _nodes[idx].particle = nullptr;
+            
+            _nodes[idx].particleIdx = -1;
 
             for (int i = 0; i < 4; i++) {
                 _nodes.push_back(QuadTreeNode());
@@ -115,7 +120,7 @@ void QuadTree::build() {
                     _nodes[newIdx].position = { _nodes[idx].position.x + _nodes[newIdx].dimentions.x, _nodes[idx].position.y + _nodes[newIdx].dimentions.y };
                 }
                 if (contains(&_nodes[newIdx], p)) {
-                    _nodes[newIdx].particle = p;
+                    _nodes[newIdx].particleIdx = particleIdx;
                 }
             }
             // go to correct quad
@@ -128,15 +133,15 @@ void QuadTree::build() {
             }
         }
         // insert
-        _nodes[idx].particle = &particle;
+        _nodes[idx].particleIdx = i;
     }
 }
 
 void QuadTree::calculateMass() {
     for (int i = _nodes.size() - 1; i >= 0; i--) {
-        if (_nodes[i].particle) {
-            _nodes[i].mass = _nodes[i].particle->mass;
-            _nodes[i].massCenter = _nodes[i].particle->position;
+        if (_nodes[i].particleIdx != -1) {
+            _nodes[i].mass = _particles[_nodes[i].particleIdx].mass;
+            _nodes[i].massCenter = _particles[_nodes[i].particleIdx].position;
         }
         else if (_nodes[i].leavesIdx == -1) {
             _nodes[i].mass = 0;
@@ -160,7 +165,7 @@ void QuadTree::calculateMass() {
     }
 }
 
-float2 QuadTree::getTotalForce(Particle& particle) {
+float2 QuadTree::getTotalForce(int particleIdx) {
     float2 totalForce = { 0,0 };
 
     std::stack<int> idxs;
@@ -170,19 +175,19 @@ float2 QuadTree::getTotalForce(Particle& particle) {
         int i = idxs.top();
         idxs.pop();
 
-        if (_nodes[i].particle == &particle) {
+        if (_nodes[i].particleIdx == particleIdx) {
             continue;
         }
-        if (_nodes[i].particle) {
-            float2 r = distance(particle.position, _nodes[i].particle->position);
-            totalForce = sum(totalForce, calculateForce(r, _nodes[i].particle->mass, &particle));
+        if (_nodes[i].particleIdx != -1) {
+            float2 r = distance(_particles[particleIdx].position, _particles[_nodes[i].particleIdx].position);
+            totalForce = sum(totalForce, calculateForce(r, _particles[_nodes[i].particleIdx].mass, &_particles[particleIdx]));
             continue;
         }
         const float s = _nodes[i].dimentions.x;
-        const float d = length(distance(particle.position, _nodes[i].massCenter));
+        const float d = length(distance(_particles[particleIdx].position, _nodes[i].massCenter));
         if (s / d < 0.5) {
-            float2 r = distance(particle.position, _nodes[i].massCenter);
-            totalForce = sum(totalForce, calculateForce(r, _nodes[i].mass, &particle));
+            float2 r = distance(_particles[particleIdx].position, _nodes[i].massCenter);
+            totalForce = sum(totalForce, calculateForce(r, _nodes[i].mass, &_particles[particleIdx]));
             continue;
         }
         else if (_nodes[i].leavesIdx != -1) {
@@ -197,9 +202,9 @@ float2 QuadTree::getTotalForce(Particle& particle) {
 }
 
 void QuadTree::computeForces() {
-    for (Particle& particle : _particles) {
-        float2 force = getTotalForce(particle);
-        updateAcceletation(&particle, force);
+    for (int i = 0; i < _particles.size(); i++) {
+        float2 force = getTotalForce(i);
+        updateAcceletation(&_particles[i], force);
     }
 }
 

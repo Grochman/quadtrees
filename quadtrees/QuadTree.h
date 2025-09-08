@@ -27,6 +27,6 @@ public:
     void calculateMass();
     void computeForces();
     void updatePositions(float dt);
-    float2 getTotalForce(Particle& particle);
+    float2 getTotalForce(int particleIdx);
     void draw(sf::RenderWindow& window, bool transform = false, bool showGrid = false, bool showMassCenter = false);
 };

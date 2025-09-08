@@ -14,8 +14,7 @@ typedef struct {
     float2 massCenter;
     float mass;
     int leavesIdx;
-    Particle particle;
-    int particleId;
+    int particleIdx;
 } QuadTreeNode;
 
 
