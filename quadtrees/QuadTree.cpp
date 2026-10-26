@@ -8,7 +8,7 @@
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 
 QuadTree::QuadTree(std::vector<Particle>& particles) 
-    : _particles(particles){
+    : _particles(particles), _nodeBuffer(nullptr){
 
     cl_platform_id platfmors;
     clGetPlatformIDs(1, &platfmors, nullptr);
@@ -139,7 +139,9 @@ void QuadTree::build() {
         _nodes[idx].particleIdx = i;
     }
 
-    clReleaseMemObject(_nodeBuffer);
+    if (_nodeBuffer != nullptr) {
+        clReleaseMemObject(_nodeBuffer);
+    }
     _nodeBuffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _nodes.size() * sizeof(QuadTreeNode), nullptr, nullptr);
 }
 

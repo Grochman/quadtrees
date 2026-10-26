@@ -363,3 +363,7 @@ MigrationBackup/
 FodyWeavers.xsd
 
 vcpkg_installed/
+
+# Linux CMake build and the unpacked apt toolchain from setup-linux.sh
+/build/
+/.toolchain/
