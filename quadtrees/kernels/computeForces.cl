@@ -21,7 +21,7 @@ typedef struct {
 inline void updateAcceleration(__global Particle* particle, float2 force) {
     particle->acceleration.x += force.x / particle->mass;
     particle->acceleration.y += force.y / particle->mass;
-};
+}
 
 inline float2 calculateForce(float2 distance, float mass, __global Particle* particle) {
     float2 unit_vector = normalize(distance); 
