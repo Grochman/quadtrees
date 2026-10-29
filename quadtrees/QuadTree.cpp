@@ -3,9 +3,30 @@
 #include <iostream>
 #include <stack>
 #include <fstream>
+#include <cstdlib>
 
 #define MIN 0.1f
 #define ROUNDING_ERROR_CORRECTION 0.0001f
+
+namespace {
+
+void failInsert(const char* message) {
+    std::cerr << message << '\n';
+    abort();
+}
+
+int childContaining(std::vector<QuadTreeNode>& nodes, int parentIdx, Particle* particle) {
+    int found = -1;
+    for (int i = 0; i < 4; ++i) {
+        const int leafIdx = nodes[parentIdx].leavesIdx + i;
+        if (contains(&nodes[leafIdx], particle)) {
+            found = leafIdx;
+        }
+    }
+    return found;
+}
+
+}
 
 QuadTree::QuadTree(std::vector<Particle>& particles) 
     : _particles(particles), _nodeBuffer(nullptr){
@@ -81,12 +102,9 @@ void QuadTree::build() {
         // go down the tree
         int idx = 0;
         while (_nodes[idx].leavesIdx != -1) {
-            int newIdx = idx;
-            for (int i = 0; i < 4; i++) {
-                unsigned int leafIdx = _nodes[idx].leavesIdx + i;
-                if (contains(&_nodes[leafIdx], &particle)) {
-                    newIdx = leafIdx;
-                }
+            const int newIdx = childContaining(_nodes, idx, &particle);
+            if (newIdx < 0) {
+                failInsert("particle is inside a node but none of its children");
             }
             idx = newIdx;
         }
@@ -99,12 +117,12 @@ void QuadTree::build() {
             Particle* p = &_particles[particleIdx];
             
             if (p->position.x == particle.position.x && p->position.y == particle.position.y) {
-                std::cout << "two particles with the exact same position";
-                return;
+                failInsert("two particles with the exact same position");
             }
             
             _nodes[idx].particleIdx = -1;
 
+            bool occupantPlaced = false;
             for (int i = 0; i < 4; i++) {
                 _nodes.push_back(QuadTreeNode());
                 int newIdx = _nodes.size() - 1;
@@ -124,16 +142,17 @@ void QuadTree::build() {
                 }
                 if (contains(&_nodes[newIdx], p)) {
                     _nodes[newIdx].particleIdx = particleIdx;
+                    occupantPlaced = true;
                 }
             }
-            // go to correct quad
-            for (int i = 0; i < 4; i++) {
-                int leafIdx = _nodes[idx].leavesIdx + i;
-                if (contains(&_nodes[leafIdx], &particle)) {
-                    idx = leafIdx;
-                    break;
-                }
+            if (!occupantPlaced) {
+                failInsert("existing particle was not placed in any child after split");
             }
+            const int nextIdx = childContaining(_nodes, idx, &particle);
+            if (nextIdx < 0) {
+                failInsert("particle is inside a node but none of its children");
+            }
+            idx = nextIdx;
         }
         // insert
         _nodes[idx].particleIdx = i;
