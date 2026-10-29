@@ -80,6 +80,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -95,6 +96,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,9 +109,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;QUADTREES_ENABLE_OPENCL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
       <AdditionalIncludeDirectories>C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2\include; </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -125,9 +128,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;QUADTREES_ENABLE_OPENCL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <OpenMPSupport>true</OpenMPSupport>
       <AdditionalIncludeDirectories>C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2\include; </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
