@@ -5,11 +5,28 @@ N-body simulation done as a OpenCL learning exercise (all my notes: https://groc
 - Barnes-Hut algorithm implementation
 - Leapfrog integration
 - quadtree visualization (SFML)
-- basic GPU acceleration
+- OpenMP CPU multithreading (forces, bounding box, leapfrog)
+- optional OpenCL GPU acceleration
+
+## OpenMP
+
+The default compute backend is OpenMP. Tree rebuild and mass/COM stay sequential; the Barnes-Hut force walk and leapfrog update run with OpenMP. Sequential CPU and OpenCL remain selectable for comparison.
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+cd build
+./quadtrees --help
+./quadtrees --backend omp --particles 4096 --steps 30 --threads 4
+./quadtrees --verify --particles 2048 --steps 10 --threads 4
+./quadtrees --backend omp          # SFML window
+```
+
+Headless timing starts when `--steps` or `--verify` is set. Performance numbers and parallelisation notes: [docs/openmp-report.md](docs/openmp-report.md).
 
 ## Build
 
-The simulation is C++20. It links SFML 3 for the window and OpenCL for the force and integration steps. Run the binary from the `build` directory. The kernels are loaded as `kernels/*.cl` relative to the current directory, and the build copies them next to the executable.
+The simulation is C++20. It links SFML (3 preferred, 2.6 accepted) and OpenMP. OpenCL is optional: if the SDK is missing, CMake still builds the sequential and OpenMP backends. Run the binary from the `build` directory. The kernels are loaded as `kernels/*.cl` relative to the current directory, and the build copies them next to the executable. Use `CMAKE_BUILD_TYPE=Release` for the OpenMP measurements.
 
 ### Windows
 
@@ -20,11 +37,11 @@ Open `quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. SFML
 The default OpenCL package is `intel-opencl-icd`. It supports Intel Xe and Gen12 GPUs and newer.
 
 ```bash
-sudo apt install build-essential cmake ninja-build pkg-config \
+sudo apt install build-essential cmake ninja-build pkg-config g++ \
   libsfml-dev opencl-headers ocl-icd-opencl-dev intel-opencl-icd clinfo
-cmake -S . -B build -G Ninja
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
 cmake --build build
-cd build && ./quadtrees
+cd build && ./quadtrees --backend omp --particles 4096 --steps 20 --threads 4
 ```
 
 For an older Intel iGPU (Gen8 through Gen11), install `intel-opencl-icd-legacy` instead of `intel-opencl-icd`. Do not install both. The program uses the first OpenCL platform it finds, so the extra runtime would hide the GPU.
@@ -57,6 +74,7 @@ Source `env-linux.sh` again in every new shell before building or running.
 ### main branches
 - master - primary branch with wip gpu integration
 - cpu - a more classic data structure approach
+- OpenMP CPU backend lives on this tree (`--backend omp|seq`)
 ### outdated branches
 - experimental - a quadtree data structure with the ability to update particle ownership without rebuilding the whole tree
 - overengeneered - exploration of template usage for mor flexible quadtree object
@@ -72,7 +90,6 @@ Source `env-linux.sh` again in every new shell before building or running.
   - intuitive zoomout 
 - exploration of different integration methods (rk4)
 - collisions
-- OpenMP cpu multithreading
 
 ## resources
 - [The Barnes-Hut Algorithm](https://arborjs.org/docs/barnes-hut)
