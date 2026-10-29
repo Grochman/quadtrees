@@ -13,6 +13,9 @@ float2 distance(const float2& vec1, const float2& vec2) {
 
 float2 unit(const float2& vector) {
     float l = length(vector);
+    if (l == 0.f) {
+        return float2{ 0.f, 0.f };
+    }
     return float2{ vector.x / l, vector.y / l };
 }
 

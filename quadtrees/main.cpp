@@ -1,5 +1,7 @@
 ﻿#include <iostream>
 #include <chrono>
+#include <ctime>
+#include <cstdlib>
 #include <SFML/Graphics.hpp>
 
 #include "QuadTree.h"
@@ -33,6 +35,11 @@ int main() {
     int frameCount = 0;
 
     while (window.isOpen()) {
+        while (const auto event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+            }
+        }
         frameCount++;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         float timeElapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.f;

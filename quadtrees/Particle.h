@@ -3,8 +3,6 @@
 #include "Vector2d.h"
 
 
-struct QuadTreeNode;
-
 struct Particle {
     float2 position;
     float2 velocity;

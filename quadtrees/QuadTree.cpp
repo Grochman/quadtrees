@@ -81,7 +81,7 @@ void QuadTree::build() {
         // go down the tree
         int idx = 0;
         while (_nodes[idx].leavesIdx != -1) {
-            int newIdx;
+            int newIdx = idx;
             for (int i = 0; i < 4; i++) {
                 unsigned int leafIdx = _nodes[idx].leavesIdx + i;
                 if (contains(&_nodes[leafIdx], &particle)) {
