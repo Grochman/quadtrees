@@ -1,29 +1,64 @@
 #include "QuadTree.h"
-#include <CL/cl.h>
 #include <iostream>
-#include <stack>
 #include <fstream>
+#include <limits>
+#include <cmath>
+#include <algorithm>
+#include <omp.h>
 
 #define MIN 0.1f
 #define ROUNDING_ERROR_CORRECTION 0.0001f
+#define THETA 0.5f
+#define MAX_STACK 64
 
-QuadTree::QuadTree(std::vector<Particle>& particles) 
-    : _particles(particles), _nodeBuffer(nullptr){
+QuadTree::QuadTree(std::vector<Particle>& particles, ComputeBackend backend)
+    : _particles(particles), _backend(backend) {
+#ifdef QUADTREES_ENABLE_OPENCL
+    if (_backend == ComputeBackend::OpenCL) {
+        initOpenCL();
+    }
+#endif
+}
 
+QuadTree::~QuadTree() {
+#ifdef QUADTREES_ENABLE_OPENCL
+    if (_computeForcesKernel) {
+        clReleaseKernel(_computeForcesKernel);
+    }
+    if (_updatePositionsKernel) {
+        clReleaseKernel(_updatePositionsKernel);
+    }
+    if (_particleBuffer) {
+        clReleaseMemObject(_particleBuffer);
+    }
+    if (_nodeBuffer) {
+        clReleaseMemObject(_nodeBuffer);
+    }
+    if (_queue) {
+        clReleaseCommandQueue(_queue);
+    }
+    if (_context) {
+        clReleaseContext(_context);
+    }
+#endif
+}
+
+#ifdef QUADTREES_ENABLE_OPENCL
+void QuadTree::initOpenCL() {
     cl_platform_id platfmors;
     clGetPlatformIDs(1, &platfmors, nullptr);
     cl_device_id device;
     clGetDeviceIDs(platfmors, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
-    
+
     _context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, nullptr);
     _queue = clCreateCommandQueueWithProperties(_context, device, nullptr, nullptr);
-    
+
     _particleBuffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _particles.size() * sizeof(Particle), nullptr, nullptr);
     _globalDimensions = _particles.size();
-    
+
     _updatePositionsKernel = buildKernel(device, "kernels/updatePositions.cl", "updatePositions");
     _computeForcesKernel = buildKernel(device, "kernels/computeForces.cl", "computeForces");
-};
+}
 
 cl_kernel QuadTree::buildKernel(cl_device_id device, const char* sourceFile, const char* functionName) {
     std::ifstream file(sourceFile);
@@ -47,28 +82,34 @@ void QuadTree::checkError(cl_int status, cl_program program, cl_device_id device
         abort();
     }
 }
+#endif
 
 void QuadTree::computeBounds() {
     _nodes.clear();
     _nodes.push_back(QuadTreeNode());
 
-    float left = INT_MAX;
-    float right = INT_MIN;
-    float top = INT_MAX;
-    float bottom = INT_MIN;
+    float left = std::numeric_limits<float>::max();
+    float right = std::numeric_limits<float>::lowest();
+    float top = std::numeric_limits<float>::max();
+    float bottom = std::numeric_limits<float>::lowest();
 
-    for (Particle& particle : _particles) {
-        left = std::min(particle.position.x, left);
-        right = std::max(particle.position.x, right);
-        top = std::min(particle.position.y, top);
-        bottom = std::max(particle.position.y, bottom);
+    const int n = static_cast<int>(_particles.size());
+    const int parallel = (_backend == ComputeBackend::OpenMP) ? 1 : 0;
+
+#pragma omp parallel for reduction(min:left,top) reduction(max:right,bottom) if(parallel)
+    for (int i = 0; i < n; ++i) {
+        const float2 p = _particles[i].position;
+        left = std::min(p.x, left);
+        right = std::max(p.x, right);
+        top = std::min(p.y, top);
+        bottom = std::max(p.y, bottom);
     }
-    
+
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
     _nodes[0].dimentions.x = right - left + ROUNDING_ERROR_CORRECTION;
     _nodes[0].dimentions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
-    }
+}
 
 void QuadTree::build() {
     // while particles insert
@@ -139,10 +180,14 @@ void QuadTree::build() {
         _nodes[idx].particleIdx = i;
     }
 
-    if (_nodeBuffer != nullptr) {
-        clReleaseMemObject(_nodeBuffer);
+#ifdef QUADTREES_ENABLE_OPENCL
+    if (_backend == ComputeBackend::OpenCL) {
+        if (_nodeBuffer != nullptr) {
+            clReleaseMemObject(_nodeBuffer);
+        }
+        _nodeBuffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _nodes.size() * sizeof(QuadTreeNode), nullptr, nullptr);
     }
-    _nodeBuffer = clCreateBuffer(_context, CL_MEM_READ_WRITE, _nodes.size() * sizeof(QuadTreeNode), nullptr, nullptr);
+#endif
 }
 
 void QuadTree::calculateMass() {
@@ -173,23 +218,112 @@ void QuadTree::calculateMass() {
     }
 }
 
+float2 QuadTree::totalForceOn(int particleIdx) const {
+    float2 totalForce{ 0.f, 0.f };
+    int stack[MAX_STACK];
+    int top = -1;
+    stack[++top] = 0;
+    const float2 p = _particles[particleIdx].position;
+    const float pMass = _particles[particleIdx].mass;
+
+    while (top > -1) {
+        const int i = stack[top--];
+
+        if (_nodes[i].particleIdx == particleIdx) {
+            continue;
+        }
+        if (_nodes[i].particleIdx != -1) {
+            const Particle& other = _particles[_nodes[i].particleIdx];
+            const float2 r = distance(p, other.position);
+            float distance_length = std::max(length(r), MIN);
+            const float2 unit_vector = unit(r);
+            const float mag = other.mass * pMass / (distance_length * distance_length);
+            totalForce.x += mag * unit_vector.x;
+            totalForce.y += mag * unit_vector.y;
+            continue;
+        }
+
+        const float s = _nodes[i].dimentions.x;
+        const float2 rCenter = distance(p, _nodes[i].massCenter);
+        const float d = length(rCenter);
+        if (d > 0.f && (s / d) < THETA) {
+            float distance_length = std::max(d, MIN);
+            const float2 unit_vector = unit(rCenter);
+            const float mag = _nodes[i].mass * pMass / (distance_length * distance_length);
+            totalForce.x += mag * unit_vector.x;
+            totalForce.y += mag * unit_vector.y;
+            continue;
+        }
+        else if (_nodes[i].leavesIdx != -1 && top + 4 < MAX_STACK) {
+            stack[++top] = _nodes[i].leavesIdx;
+            stack[++top] = _nodes[i].leavesIdx + 1;
+            stack[++top] = _nodes[i].leavesIdx + 2;
+            stack[++top] = _nodes[i].leavesIdx + 3;
+        }
+    }
+
+    return totalForce;
+}
+
+void QuadTree::computeForcesCpu() {
+    const int n = static_cast<int>(_particles.size());
+    const int parallel = (_backend == ComputeBackend::OpenMP) ? 1 : 0;
+
+    // Barnes-Hut cost varies with particle location; dynamic chunks keep cores busy.
+#pragma omp parallel for schedule(dynamic, 32) if(parallel)
+    for (int id = 0; id < n; ++id) {
+        const float2 force = totalForceOn(id);
+        updateAcceletation(&_particles[id], force);
+    }
+}
+
 void QuadTree::computeForces() {
-    clEnqueueWriteBuffer(_queue, _particleBuffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
-    clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_TRUE, 0, _nodes.size() * sizeof(QuadTreeNode), _nodes.data(), 0, nullptr, nullptr);
+#ifdef QUADTREES_ENABLE_OPENCL
+    if (_backend == ComputeBackend::OpenCL) {
+        clEnqueueWriteBuffer(_queue, _particleBuffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
+        clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_TRUE, 0, _nodes.size() * sizeof(QuadTreeNode), _nodes.data(), 0, nullptr, nullptr);
 
-    clSetKernelArg(_computeForcesKernel, 0, sizeof(cl_mem), &_particleBuffer);
-    clSetKernelArg(_computeForcesKernel, 1, sizeof(cl_mem), &_nodeBuffer);
+        clSetKernelArg(_computeForcesKernel, 0, sizeof(cl_mem), &_particleBuffer);
+        clSetKernelArg(_computeForcesKernel, 1, sizeof(cl_mem), &_nodeBuffer);
 
-    clEnqueueNDRangeKernel(_queue, _computeForcesKernel, 1, nullptr, &_globalDimensions, nullptr, 0, nullptr, nullptr);
-    clFinish(_queue);
+        clEnqueueNDRangeKernel(_queue, _computeForcesKernel, 1, nullptr, &_globalDimensions, nullptr, 0, nullptr, nullptr);
+        clFinish(_queue);
+        return;
+    }
+#endif
+    computeForcesCpu();
+}
+
+void QuadTree::updatePositionsCpu(float dt) {
+    const int n = static_cast<int>(_particles.size());
+    const int parallel = (_backend == ComputeBackend::OpenMP) ? 1 : 0;
+
+#pragma omp parallel for schedule(static) if(parallel)
+    for (int i = 0; i < n; ++i) {
+        move(&_particles[i], dt);
+    }
 }
 
 void QuadTree::updatePositions(float dt) {
-    clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem), &_particleBuffer);
-    clSetKernelArg(_updatePositionsKernel, 1, sizeof(float), &dt);
-    clEnqueueNDRangeKernel(_queue, _updatePositionsKernel, 1, nullptr, &_globalDimensions, nullptr, 0, nullptr, nullptr);
-    clEnqueueReadBuffer(_queue, _particleBuffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
-    clFinish(_queue);
+#ifdef QUADTREES_ENABLE_OPENCL
+    if (_backend == ComputeBackend::OpenCL) {
+        clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem), &_particleBuffer);
+        clSetKernelArg(_updatePositionsKernel, 1, sizeof(float), &dt);
+        clEnqueueNDRangeKernel(_queue, _updatePositionsKernel, 1, nullptr, &_globalDimensions, nullptr, 0, nullptr, nullptr);
+        clEnqueueReadBuffer(_queue, _particleBuffer, CL_TRUE, 0, _particles.size() * sizeof(Particle), _particles.data(), 0, nullptr, nullptr);
+        clFinish(_queue);
+        return;
+    }
+#endif
+    updatePositionsCpu(dt);
+}
+
+void QuadTree::step(float dt) {
+    computeBounds();
+    build();
+    calculateMass();
+    computeForces();
+    updatePositions(dt);
 }
 
 void QuadTree::draw(sf::RenderWindow& window, bool transform, bool showGrid, bool showMassCenter) {
