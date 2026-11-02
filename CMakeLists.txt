@@ -8,6 +8,7 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(SFML 3 CONFIG REQUIRED COMPONENTS Graphics Window System)
 find_package(OpenCL REQUIRED)
@@ -16,7 +17,6 @@ add_executable(quadtrees
     quadtrees/main.cpp
     quadtrees/Particle.cpp
     quadtrees/QuadTree.cpp
-    quadtrees/QuadTreeNode.cpp
     quadtrees/Vector2d.cpp
 )
 

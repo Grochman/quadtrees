@@ -6,6 +6,7 @@ typedef struct {
     float2 velocity;
     float2 acceleration;
     float mass;
+    float pad;
 } Particle;
 
 typedef struct {
@@ -15,19 +16,22 @@ typedef struct {
     float mass;
     int leavesIdx;
     int particleIdx;
+    int pad;
 } QuadTreeNode;
 
 
 inline void updateAcceleration(__global Particle* particle, float2 force) {
+    if (!(particle->mass > 0.f)) {
+        return;
+    }
     particle->acceleration.x += force.x / particle->mass;
     particle->acceleration.y += force.y / particle->mass;
 }
 
 inline float2 calculateForce(float2 distance, float mass, __global Particle* particle) {
-    float2 unit_vector = normalize(distance); 
-    float distance_length = length(distance);
-    distance_length = max(distance_length, MIN_DIST);
-    float2 force = (mass * particle->mass / pow(distance_length, 2.f)) * unit_vector;
+    float distance_length = max(length(distance), MIN_DIST);
+    float2 unit_vector = distance / distance_length;
+    float2 force = (mass * particle->mass / (distance_length * distance_length)) * unit_vector;
     return force;
 }
 
@@ -49,12 +53,15 @@ inline float2 getTotalForce(int particleIdx, __global Particle* particles, __glo
         }
         const float s = nodes[i].dimensions.x;
         const float d = length(nodes[i].massCenter - particles[particleIdx].position);
-        if (s / d < 0.5) {
+        if (d > 0.f && s / d < 0.5f) {
             float2 r = nodes[i].massCenter - particles[particleIdx].position;
             totalForce = totalForce + calculateForce(r, nodes[i].mass, &particles[particleIdx]);
             continue;
         }
         else if (nodes[i].leavesIdx != -1) {
+            if (top + 4 >= MAX_STACK) {
+                continue;
+            }
             stack[++top] = nodes[i].leavesIdx;
             stack[++top] = nodes[i].leavesIdx + 1;
             stack[++top] = nodes[i].leavesIdx + 2;
