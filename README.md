@@ -9,13 +9,9 @@ N-body simulation done as a OpenCL learning exercise (all my notes: https://groc
 
 ## Build
 
-The simulation is C++23. It links SFML 3 for the window and OpenCL for the force and integration steps. Kernel sources in `src/kernels/` are embedded with `#embed`, so the binary does not load `.cl` files at run time.
+The simulation is C++23. It links SFML 3 for the window and OpenCL for the force and integration steps. Kernel sources in `src/kernels/` are embedded with `#embed`, so the binary does not load `.cl` files at run time. The build is CMake on Linux.
 
-### Windows
-
-Open `vs/quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. The project uses the **ClangCL** toolset (`clang-cl`) so `#embed` works; install the “C++ Clang Compiler for Windows” workload if Visual Studio does not list it. Sources and OpenCL kernels live in `src/` (`src/kernels/`). SFML comes from the vcpkg manifest in `vcpkg.json` (manifest mode). OpenCL comes from Intel oneAPI. The project file looks for headers and `OpenCL.lib` under `C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2`.
-
-### Linux with sudo
+### With sudo
 
 The default OpenCL package is `intel-opencl-icd`. It supports Intel Xe and Gen12 GPUs and newer.
 
@@ -29,7 +25,7 @@ cd build && ./quadtrees
 
 For an older Intel iGPU (Gen8 through Gen11), install `intel-opencl-icd-legacy` instead of `intel-opencl-icd`. Do not install both. The program uses the first OpenCL platform it finds, so the extra runtime would hide the GPU.
 
-### Linux without sudo
+### Without sudo
 
 `setup-linux.sh` downloads the same packages with `apt-get download` and unpacks them into `.toolchain` in this directory. That directory is gitignored. `env-linux.sh` puts it on `PATH` and points the OpenCL loader at it. The default runtime is `intel-opencl-icd`. Pass `--legacy` to unpack `intel-opencl-icd-legacy` instead, for the same older Intel GPUs as above.
 
