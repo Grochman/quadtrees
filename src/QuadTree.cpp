@@ -10,6 +10,15 @@
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 #define MIN_CELL_SIZE 1e-8f
 
+namespace {
+constexpr char kUpdatePositions[] = {
+#embed "kernels/updatePositions.cl"
+    , '\0'};
+constexpr char kComputeForces[] = {
+#embed "kernels/computeForces.cl"
+    , '\0'};
+} // namespace
+
 QuadTree::QuadTree(std::vector<Particle> &particles)
     : _particles(particles), _context(nullptr), _queue(nullptr),
       _particleBuffer(nullptr), _nodeBuffer(nullptr),
@@ -48,23 +57,12 @@ QuadTree::QuadTree(std::vector<Particle> &particles)
     _globalDimensions = _particles.size();
 
     _updatePositionsKernel =
-        buildKernel(device, "kernels/updatePositions.cl", "updatePositions");
-    _computeForcesKernel =
-        buildKernel(device, "kernels/computeForces.cl", "computeForces");
+        buildKernel(device, kUpdatePositions, "updatePositions");
+    _computeForcesKernel = buildKernel(device, kComputeForces, "computeForces");
 }
 
-cl_kernel QuadTree::buildKernel(cl_device_id device, const char *sourceFile,
+cl_kernel QuadTree::buildKernel(cl_device_id device, const char *source,
                                 const char *functionName) {
-    std::ifstream file(sourceFile);
-    if (!file) {
-        fatal("failed to open OpenCL kernel file");
-    }
-    std::string sourceString((std::istreambuf_iterator<char>(file)),
-                             std::istreambuf_iterator<char>());
-    if (sourceString.empty()) {
-        fatal("OpenCL kernel file is empty");
-    }
-    const char *source = sourceString.c_str();
 
     cl_int status = CL_SUCCESS;
     cl_program program = clCreateProgramWithSource(

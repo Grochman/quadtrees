@@ -9,11 +9,11 @@ N-body simulation done as a OpenCL learning exercise (all my notes: https://groc
 
 ## Build
 
-The simulation is C++20. It links SFML 3 for the window and OpenCL for the force and integration steps. Run the binary from the `build` directory. The kernels are loaded as `kernels/*.cl` relative to the current directory, and the build copies them next to the executable.
+The simulation is C++23. It links SFML 3 for the window and OpenCL for the force and integration steps. Kernel sources in `src/kernels/` are embedded with `#embed`, so the binary does not load `.cl` files at run time.
 
 ### Windows
 
-Open `vs/quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. Sources and OpenCL kernels live in `src/` (`src/kernels/`). SFML comes from the vcpkg manifest in `vcpkg.json` (manifest mode). OpenCL comes from Intel oneAPI. The project file looks for headers and `OpenCL.lib` under `C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2`.
+Open `vs/quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. The project uses the **ClangCL** toolset (`clang-cl`) so `#embed` works; install the “C++ Clang Compiler for Windows” workload if Visual Studio does not list it. Sources and OpenCL kernels live in `src/` (`src/kernels/`). SFML comes from the vcpkg manifest in `vcpkg.json` (manifest mode). OpenCL comes from Intel oneAPI. The project file looks for headers and `OpenCL.lib` under `C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2`.
 
 ### Linux with sudo
 

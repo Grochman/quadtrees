@@ -5,7 +5,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -28,11 +28,4 @@ target_link_libraries(quadtrees PRIVATE
     SFML::Window
     SFML::System
     OpenCL::OpenCL
-)
-
-# Kernels are opened as "kernels/*.cl" relative to the process working directory.
-add_custom_command(TARGET quadtrees POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/src/kernels
-        $<TARGET_FILE_DIR:quadtrees>/kernels
 )

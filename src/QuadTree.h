@@ -33,7 +33,7 @@ class QuadTree {
     void checkError(cl_int status, const char *what);
     void checkBuildError(cl_int status, cl_program program,
                          cl_device_id device);
-    cl_kernel buildKernel(cl_device_id device, const char *sourceFile,
+    cl_kernel buildKernel(cl_device_id device, const char *source,
                           const char *functionName);
     bool contains(const QuadTreeNode *node, const Particle *particle);
     int childIndex(const QuadTreeNode *node, const Particle *particle);
