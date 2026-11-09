@@ -13,7 +13,7 @@ The simulation is C++20. It links SFML 3 for the window and OpenCL for the force
 
 ### Windows
 
-Open `quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. SFML comes from the vcpkg manifest in `vcpkg.json` (manifest mode). OpenCL comes from Intel oneAPI. The project file looks for headers and `OpenCL.lib` under `C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2`.
+Open `vs/quadtrees.sln` in Visual Studio 2022 and build the x64 configuration. Sources and OpenCL kernels live in `src/` (`src/kernels/`). SFML comes from the vcpkg manifest in `vcpkg.json` (manifest mode). OpenCL comes from Intel oneAPI. The project file looks for headers and `OpenCL.lib` under `C:\Program Files (x86)\Intel\oneAPI\compiler\2025.2`.
 
 ### Linux with sudo
 

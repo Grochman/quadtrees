@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35919.96 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quadtrees", "quadtrees\quadtrees.vcxproj", "{9F685BF5-8F74-4DAC-A725-08D5A8A6A6BA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quadtrees", "quadtrees.vcxproj", "{9F685BF5-8F74-4DAC-A725-08D5A8A6A6BA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

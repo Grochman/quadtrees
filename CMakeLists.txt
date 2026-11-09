@@ -14,12 +14,13 @@ find_package(SFML 3 CONFIG REQUIRED COMPONENTS Graphics Window System)
 find_package(OpenCL REQUIRED)
 
 add_executable(quadtrees
-    quadtrees/main.cpp
-    quadtrees/Particle.cpp
-    quadtrees/QuadTree.cpp
-    quadtrees/Vector2d.cpp
+    src/main.cpp
+    src/Particle.cpp
+    src/QuadTree.cpp
+    src/Vector2d.cpp
 )
 
+target_include_directories(quadtrees PRIVATE src)
 target_compile_definitions(quadtrees PRIVATE CL_TARGET_OPENCL_VERSION=300)
 
 target_link_libraries(quadtrees PRIVATE
@@ -32,6 +33,6 @@ target_link_libraries(quadtrees PRIVATE
 # Kernels are opened as "kernels/*.cl" relative to the process working directory.
 add_custom_command(TARGET quadtrees POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/quadtrees/kernels
+        ${CMAKE_SOURCE_DIR}/src/kernels
         $<TARGET_FILE_DIR:quadtrees>/kernels
 )
