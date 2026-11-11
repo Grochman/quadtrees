@@ -1,7 +1,10 @@
 #include "Renderer.h"
 #include "Fail.h"
 
-Renderer::Renderer(unsigned int windowWidth, unsigned int windowHeight) {
+Renderer::Renderer(unsigned int windowWidth, unsigned int windowHeight,
+                   bool transform, bool showGrid, bool showMassCenter)
+    : _transform(transform), _showGrid(showGrid),
+      _showMassCenter(showMassCenter) {
     _window = sf::RenderWindow(sf::VideoMode({windowWidth, windowHeight}),
                                "QuadTrees");
 }
@@ -19,13 +22,17 @@ void Renderer::pollClose() {
 bool Renderer::isOpen() { return _window.isOpen(); }
 
 void Renderer::draw(std::vector<Particle> &particles,
-                    std::vector<QuadTreeNode> &nodes, bool transform,
-                    bool showGrid, bool showMassCenter) {
+                    std::vector<QuadTreeNode> &nodes) {
     float2 scale;
     float2 translation;
     float particleScale;
+    bool transform = _transform;
 
     _window.clear(sf::Color::Black);
+    if (transform && nodes.empty()) {
+        warn("skipped view transform because the tree is empty");
+        transform = false;
+    }
     if (transform) {
         if (nodes[0].dimensions.x <= 0.f || nodes[0].dimensions.y <= 0.f) {
             warn("skipped view transform because the root cell has "
@@ -45,7 +52,7 @@ void Renderer::draw(std::vector<Particle> &particles,
         particleScale = 1;
     }
 
-    if (showGrid) {
+    if (_showGrid) {
         for (QuadTreeNode &node : nodes) {
             sf::RectangleShape r(sf::Vector2f(node.dimensions.x * scale.x,
                                               node.dimensions.y * scale.y));
@@ -69,7 +76,7 @@ void Renderer::draw(std::vector<Particle> &particles,
         _window.draw(c);
     }
 
-    if (showMassCenter) {
+    if (_showMassCenter && !nodes.empty()) {
         int radius = 5;
         sf::CircleShape c(radius);
         c.setPosition(sf::Vector2f(

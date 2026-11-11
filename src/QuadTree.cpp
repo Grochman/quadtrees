@@ -10,6 +10,9 @@ QuadTree::QuadTree(std::vector<Particle> &particles) : _particles(particles) {}
 void QuadTree::computeBounds() {
     _nodes.clear();
     _nodes.push_back(QuadTreeNode());
+    if (_particles.empty()) {
+        return;
+    }
 
     float left = _particles[0].position.x;
     float right = _particles[0].position.x;

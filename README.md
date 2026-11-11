@@ -40,6 +40,28 @@ cd build && ./quadtrees
 
 Source `env-linux.sh` again in every new shell before building or running.
 
+## Run
+
+```bash
+./quadtrees [particleCount] [--transform] [--grid] [--no-grid] [--mass-center]
+```
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `particleCount` | `256` | Number of bodies. Must be a non-negative integer. |
+| `--transform` | off | Scale the view to the root cell instead of the unit square. |
+| `--grid` | on | Draw quadtree cells. |
+| `--no-grid` | — | Hide quadtree cells. |
+| `--mass-center` | off | Draw the root center of mass. |
+
+Examples:
+
+```bash
+./quadtrees
+./quadtrees 1024
+./quadtrees 1024 --transform --mass-center --no-grid
+```
+
 ## preview
 <p align="center">
 <img src="https://github.com/user-attachments/assets/1138bcb9-2cab-432b-afb0-1a53b9b5f116" width=300>
