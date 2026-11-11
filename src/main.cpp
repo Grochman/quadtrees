@@ -1,5 +1,4 @@
-﻿#include <SFML/Graphics.hpp>
-#include <chrono>
+﻿#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -7,56 +6,48 @@
 #include "Renderer.h"
 #include "World.h"
 
+namespace {
+using Clock = std::chrono::steady_clock;
+
+#ifdef NDEBUG
+constexpr unsigned int particleCount = 1024;
+#else
+constexpr unsigned int particleCount = 256;
+#endif
+
+constexpr unsigned int windowSize = 600;
+constexpr float timeScale = 0.01f;
+
+float restart(Clock::time_point &mark) {
+    const Clock::time_point now = Clock::now();
+    const float seconds =
+        std::chrono::duration_cast<std::chrono::microseconds>(now - mark)
+            .count() /
+        1000000.f;
+    mark = now;
+    return seconds;
+}
+} // namespace
+
 int main() {
     srand(time(NULL));
 
-#ifdef NDEBUG
-    const unsigned int particleCount = 1024;
-#else
-    const unsigned int particleCount = 256;
-#endif
-
     World world(particleCount);
-    Renderer renderer(600, 600);
+    Renderer renderer(windowSize, windowSize);
 
-    std::chrono::steady_clock::time_point begin =
-        std::chrono::steady_clock::now();
-    std::chrono::steady_clock::time_point beginFps =
-        std::chrono::steady_clock::now();
-
-    int frameCount = 0;
+    Clock::time_point lastStep = Clock::now();
 
     while (renderer.isOpen()) {
         renderer.pollClose();
 
-        frameCount++;
-        std::chrono::steady_clock::time_point end =
-            std::chrono::steady_clock::now();
-        float timeElapsed =
-            std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
-                .count() /
-            1000000.f;
-        begin = end;
+        const float dt = restart(lastStep);
+        world.step(dt * timeScale);
 
-        world.step(timeElapsed * 0.01f);
-
-        std::chrono::steady_clock::time_point endFps =
-            std::chrono::steady_clock::now();
-        float frameTime = std::chrono::duration_cast<std::chrono::microseconds>(
-                              endFps - beginFps)
-                              .count() /
-                          1000000.f;
-        if (frameTime <= 0.f) {
-            continue;
+        if (dt > 0.f) {
+            std::cout << "steps/s: " << 1.f / dt << '\n';
         }
-
-        if (frameCount / frameTime > 60) {
-            beginFps = endFps;
-            std::cout << "fps: " << frameCount / frameTime << '\n';
-            renderer.draw(world.getParticles(), world.getNodes(), false, true,
-                          false);
-            frameCount = 0;
-        }
+        renderer.draw(world.getParticles(), world.getNodes(), false, true,
+                      false);
     }
 
     return 0;

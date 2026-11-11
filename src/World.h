@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ComputeBackend.h"
 #include "Particle.h"
 #include "QuadTree.h"

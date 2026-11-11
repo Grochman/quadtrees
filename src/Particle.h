@@ -12,6 +12,3 @@ struct Particle {
 
 static_assert(sizeof(Particle) == 32,
               "Particle layout must match the OpenCL kernel");
-
-void move(Particle *particle, double dt);
-void updateAcceletation(Particle *particle, float2 force);
