@@ -1,12 +1,4 @@
-typedef struct {
-    float2 position;
-    float2 velocity;
-    float2 acceleration;
-    float mass;
-    float pad;
-} Particle;
-
-__kernel void updatePositions(__global Particle * particles, float dt) {
+__kernel void updatePositions(__global Particle *particles, float dt) {
     int id = get_global_id(0);
     particles[id].velocity.x += particles[id].acceleration.x * dt * 0.5f;
     particles[id].velocity.y += particles[id].acceleration.y * dt * 0.5f;

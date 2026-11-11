@@ -29,8 +29,8 @@ void QuadTree::computeBounds() {
 
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
-    _nodes[0].dimentions.x = right - left + ROUNDING_ERROR_CORRECTION;
-    _nodes[0].dimentions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].dimensions.x = right - left + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].dimensions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
 }
 
 void QuadTree::build() {
@@ -49,8 +49,8 @@ void QuadTree::build() {
 
         // split while this leaf already holds another particle
         while (_nodes[idx].particleIdx != -1) {
-            if (_nodes[idx].dimentions.x < MIN_CELL_SIZE ||
-                _nodes[idx].dimentions.y < MIN_CELL_SIZE) {
+            if (_nodes[idx].dimensions.x < MIN_CELL_SIZE ||
+                _nodes[idx].dimensions.y < MIN_CELL_SIZE) {
                 fatal("quadtree cell underflow; particles are too close to "
                       "split");
             }
@@ -71,25 +71,25 @@ void QuadTree::build() {
             for (int child = 0; child < 4; child++) {
                 _nodes.push_back(QuadTreeNode());
                 int newIdx = static_cast<int>(_nodes.size()) - 1;
-                _nodes[newIdx].dimentions = divide(_nodes[idx].dimentions, 2.f);
+                _nodes[newIdx].dimensions = divide(_nodes[idx].dimensions, 2.f);
                 switch (child) {
                 case 0: // top-left
                     _nodes[newIdx].position = _nodes[idx].position;
                     break;
                 case 1: // top-right
                     _nodes[newIdx].position = {_nodes[idx].position.x +
-                                                   _nodes[newIdx].dimentions.x,
+                                                   _nodes[newIdx].dimensions.x,
                                                _nodes[idx].position.y};
                     break;
                 case 2: // bottom-left
                     _nodes[newIdx].position = {_nodes[idx].position.x,
                                                _nodes[idx].position.y +
-                                                   _nodes[newIdx].dimentions.y};
+                                                   _nodes[newIdx].dimensions.y};
                     break;
                 default: // bottom-right
                     _nodes[newIdx].position = {
-                        _nodes[idx].position.x + _nodes[newIdx].dimentions.x,
-                        _nodes[idx].position.y + _nodes[newIdx].dimentions.y};
+                        _nodes[idx].position.x + _nodes[newIdx].dimensions.x,
+                        _nodes[idx].position.y + _nodes[newIdx].dimensions.y};
                 }
             }
 
@@ -139,8 +139,8 @@ void QuadTree::calculateMass() {
 bool QuadTree::contains(const QuadTreeNode *node, const Particle *particle) {
     if (particle->position.x >= node->position.x &&
         particle->position.y >= node->position.y &&
-        particle->position.x <= node->position.x + node->dimentions.x &&
-        particle->position.y <= node->position.y + node->dimentions.y) {
+        particle->position.x <= node->position.x + node->dimensions.x &&
+        particle->position.y <= node->position.y + node->dimensions.y) {
         return true;
     }
     return false;
@@ -150,8 +150,8 @@ int QuadTree::childIndex(const QuadTreeNode *node, const Particle *particle) {
     if (!contains(node, particle)) {
         fatal("particle is not inside the node used for child selection");
     }
-    const float midX = node->position.x + node->dimentions.x * 0.5f;
-    const float midY = node->position.y + node->dimentions.y * 0.5f;
+    const float midX = node->position.x + node->dimensions.x * 0.5f;
+    const float midY = node->position.y + node->dimensions.y * 0.5f;
     int index = 0;
     if (particle->position.x >= midX) {
         index += 1;

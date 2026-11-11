@@ -4,36 +4,28 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
-constexpr char kUpdatePositions[] = {
+constexpr char typesSource[] = {
+#embed "kernels/types.cl"
+    , '\0'};
+constexpr char updatePositionsSource[] = {
 #embed "kernels/updatePositions.cl"
     , '\0'};
-constexpr char kComputeForces[] = {
+constexpr char computeForcesSource[] = {
 #embed "kernels/computeForces.cl"
     , '\0'};
 } // namespace
 
 ComputeBackend::ComputeBackend(std::vector<Particle> &particles)
     : _particles(particles), _context(nullptr), _queue(nullptr),
-      _particleBuffer(nullptr), _nodeBuffer(nullptr),
+      _program(nullptr), _particleBuffer(nullptr), _nodeBuffer(nullptr),
+      _globalDimensions(particles.size()), _nodeCapacity(0),
       _updatePositionsKernel(nullptr), _computeForcesKernel(nullptr) {
 
     cl_int status = CL_SUCCESS;
-    cl_uint platformCount = 0;
-    status = clGetPlatformIDs(0, nullptr, &platformCount);
-    checkError(status, "clGetPlatformIDs count");
-    if (platformCount == 0) {
-        fatal("no OpenCL platform found");
-    }
-
-    cl_platform_id platform = nullptr;
-    status = clGetPlatformIDs(1, &platform, nullptr);
-    checkError(status, "clGetPlatformIDs");
-
-    cl_device_id device = nullptr;
-    status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
-    checkError(status, "clGetDeviceIDs GPU");
+    cl_device_id device = findGpu();
 
     _context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &status);
     checkError(status, "clCreateContext");
@@ -41,15 +33,35 @@ ComputeBackend::ComputeBackend(std::vector<Particle> &particles)
         clCreateCommandQueueWithProperties(_context, device, nullptr, &status);
     checkError(status, "clCreateCommandQueueWithProperties");
 
-    _particleBuffer =
-        clCreateBuffer(_context, CL_MEM_READ_WRITE,
-                       particles.size() * sizeof(Particle), nullptr, &status);
-    checkError(status, "clCreateBuffer particles");
-    _globalDimensions = particles.size();
+    if (_globalDimensions > 0) {
+        _particleBuffer = clCreateBuffer(_context, CL_MEM_READ_WRITE,
+                                         _globalDimensions * sizeof(Particle),
+                                         nullptr, &status);
+        checkError(status, "clCreateBuffer particles");
+    }
 
+    const char *sources[] = {typesSource, computeForcesSource,
+                             updatePositionsSource};
+    _program =
+        clCreateProgramWithSource(_context, 3, sources, nullptr, &status);
+    checkError(status, "clCreateProgramWithSource");
+    status = clBuildProgram(_program, 1, &device, nullptr, nullptr, nullptr);
+    checkBuildError(status, _program, device);
+
+    _computeForcesKernel = clCreateKernel(_program, "computeForces", &status);
+    checkError(status, "clCreateKernel computeForces");
     _updatePositionsKernel =
-        buildKernel(device, kUpdatePositions, "updatePositions");
-    _computeForcesKernel = buildKernel(device, kComputeForces, "computeForces");
+        clCreateKernel(_program, "updatePositions", &status);
+    checkError(status, "clCreateKernel updatePositions");
+
+    if (_particleBuffer != nullptr) {
+        checkError(clSetKernelArg(_computeForcesKernel, 0, sizeof(cl_mem),
+                                  &_particleBuffer),
+                   "clSetKernelArg forces particles");
+        checkError(clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem),
+                                  &_particleBuffer),
+                   "clSetKernelArg update particles");
+    }
 }
 
 ComputeBackend::~ComputeBackend() {
@@ -72,6 +84,10 @@ ComputeBackend::~ComputeBackend() {
                    "clReleaseKernel updatePositions");
         _updatePositionsKernel = nullptr;
     }
+    if (_program != nullptr) {
+        checkError(clReleaseProgram(_program), "clReleaseProgram");
+        _program = nullptr;
+    }
     if (_queue != nullptr) {
         checkError(clReleaseCommandQueue(_queue), "clReleaseCommandQueue");
         _queue = nullptr;
@@ -82,7 +98,36 @@ ComputeBackend::~ComputeBackend() {
     }
 }
 
-void ComputeBackend::computeForces(std::vector<QuadTreeNode> &nodes) {
+cl_device_id ComputeBackend::findGpu() {
+    cl_int status = CL_SUCCESS;
+    cl_uint platformCount = 0;
+    status = clGetPlatformIDs(0, nullptr, &platformCount);
+    checkError(status, "clGetPlatformIDs count");
+    if (platformCount == 0) {
+        fatal("no OpenCL platform found");
+    }
+
+    std::vector<cl_platform_id> platforms(platformCount);
+    status = clGetPlatformIDs(platformCount, platforms.data(), nullptr);
+    checkError(status, "clGetPlatformIDs");
+
+    for (cl_platform_id platform : platforms) {
+        cl_device_id device = nullptr;
+        status =
+            clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
+        if (status == CL_SUCCESS) {
+            return device;
+        }
+    }
+
+    fatal("no OpenCL GPU device found");
+}
+
+void ComputeBackend::ensureNodeBuffer(size_t nodeCount) {
+    if (nodeCount <= _nodeCapacity) {
+        return;
+    }
+
     if (_nodeBuffer != nullptr) {
         checkError(clReleaseMemObject(_nodeBuffer), "clReleaseMemObject nodes");
         _nodeBuffer = nullptr;
@@ -90,43 +135,50 @@ void ComputeBackend::computeForces(std::vector<QuadTreeNode> &nodes) {
     cl_int status = CL_SUCCESS;
     _nodeBuffer =
         clCreateBuffer(_context, CL_MEM_READ_WRITE,
-                       nodes.size() * sizeof(QuadTreeNode), nullptr, &status);
+                       nodeCount * sizeof(QuadTreeNode), nullptr, &status);
     checkError(status, "clCreateBuffer nodes");
+    _nodeCapacity = nodeCount;
 
-    checkError(clEnqueueWriteBuffer(_queue, _particleBuffer, CL_TRUE, 0,
-                                    _particles.size() * sizeof(Particle),
-                                    _particles.data(), 0, nullptr, nullptr),
-               "clEnqueueWriteBuffer particles");
-    checkError(clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_TRUE, 0,
-                                    nodes.size() * sizeof(QuadTreeNode),
-                                    nodes.data(), 0, nullptr, nullptr),
-               "clEnqueueWriteBuffer nodes");
-
-    checkError(clSetKernelArg(_computeForcesKernel, 0, sizeof(cl_mem),
-                              &_particleBuffer),
-               "clSetKernelArg forces particles");
     checkError(
         clSetKernelArg(_computeForcesKernel, 1, sizeof(cl_mem), &_nodeBuffer),
         "clSetKernelArg forces nodes");
+}
+
+void ComputeBackend::computeForces(std::vector<QuadTreeNode> &nodes) {
+    if (_globalDimensions == 0) {
+        return;
+    }
+
+    ensureNodeBuffer(nodes.size());
+
+    checkError(clEnqueueWriteBuffer(_queue, _particleBuffer, CL_FALSE, 0,
+                                    _particles.size() * sizeof(Particle),
+                                    _particles.data(), 0, nullptr, nullptr),
+               "clEnqueueWriteBuffer particles");
+    checkError(clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_FALSE, 0,
+                                    nodes.size() * sizeof(QuadTreeNode),
+                                    nodes.data(), 0, nullptr, nullptr),
+               "clEnqueueWriteBuffer nodes");
 
     checkError(clEnqueueNDRangeKernel(_queue, _computeForcesKernel, 1, nullptr,
                                       &_globalDimensions, nullptr, 0, nullptr,
                                       nullptr),
                "clEnqueueNDRangeKernel computeForces");
-    checkError(clFinish(_queue), "clFinish computeForces");
 }
 
 void ComputeBackend::updatePositions(float dt) {
     if (!std::isfinite(dt) || dt < 0.f) {
         fatal("non-finite or negative integration step");
     }
-    if (dt == 0.f) {
-        warn("skipped position update because dt is zero");
+    if (_globalDimensions == 0) {
         return;
     }
-    checkError(clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem),
-                              &_particleBuffer),
-               "clSetKernelArg update particles");
+    if (dt == 0.f) {
+        warn("skipped position update because dt is zero");
+        checkError(clFinish(_queue), "clFinish skipped update");
+        return;
+    }
+
     checkError(clSetKernelArg(_updatePositionsKernel, 1, sizeof(float), &dt),
                "clSetKernelArg update dt");
     checkError(clEnqueueNDRangeKernel(_queue, _updatePositionsKernel, 1,
@@ -137,22 +189,6 @@ void ComputeBackend::updatePositions(float dt) {
                                    _particles.size() * sizeof(Particle),
                                    _particles.data(), 0, nullptr, nullptr),
                "clEnqueueReadBuffer particles");
-    checkError(clFinish(_queue), "clFinish updatePositions");
-}
-
-cl_kernel ComputeBackend::buildKernel(cl_device_id device, const char *source,
-                                      const char *functionName) {
-
-    cl_int status = CL_SUCCESS;
-    cl_program program = clCreateProgramWithSource(
-        _context, 1, (const char **)&source, nullptr, &status);
-    checkError(status, "clCreateProgramWithSource");
-    status = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
-    checkBuildError(status, program, device);
-
-    cl_kernel kernel = clCreateKernel(program, functionName, &status);
-    checkError(status, "clCreateKernel");
-    return kernel;
 }
 
 void ComputeBackend::checkError(cl_int status, const char *what) {

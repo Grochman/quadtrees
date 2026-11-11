@@ -7,7 +7,7 @@
 
 struct QuadTreeNode {
     float2 position = {0, 0};
-    float2 dimentions = {1, 1};
+    float2 dimensions = {1, 1};
     float2 massCenter = {0, 0};
     float mass = 0;
     int leavesIdx = -1;

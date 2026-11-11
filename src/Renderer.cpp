@@ -27,18 +27,18 @@ void Renderer::draw(std::vector<Particle> &particles,
 
     _window.clear(sf::Color::Black);
     if (transform) {
-        if (nodes[0].dimentions.x <= 0.f || nodes[0].dimentions.y <= 0.f) {
+        if (nodes[0].dimensions.x <= 0.f || nodes[0].dimensions.y <= 0.f) {
             warn("skipped view transform because the root cell has "
                  "non-positive size");
             transform = false;
         }
     }
     if (transform) {
-        scale = {_window.getSize().x / nodes[0].dimentions.x,
-                 _window.getSize().y / nodes[0].dimentions.y};
+        scale = {_window.getSize().x / nodes[0].dimensions.x,
+                 _window.getSize().y / nodes[0].dimensions.y};
         translation = {-nodes[0].position.x * scale.x,
                        -nodes[0].position.y * scale.y};
-        particleScale = 1 / nodes[0].dimentions.x;
+        particleScale = 1 / nodes[0].dimensions.x;
     } else {
         scale = {_window.getSize().x / 1.f, _window.getSize().y / 1.f};
         translation = {0.f * scale.x, 0.f * scale.y};
@@ -47,8 +47,8 @@ void Renderer::draw(std::vector<Particle> &particles,
 
     if (showGrid) {
         for (QuadTreeNode &node : nodes) {
-            sf::RectangleShape r(sf::Vector2f(node.dimentions.x * scale.x,
-                                              node.dimentions.y * scale.y));
+            sf::RectangleShape r(sf::Vector2f(node.dimensions.x * scale.x,
+                                              node.dimensions.y * scale.y));
             r.setPosition(
                 sf::Vector2f(node.position.x * scale.x + translation.x,
                              node.position.y * scale.y + translation.y));
