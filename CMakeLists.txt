@@ -17,7 +17,9 @@ add_executable(quadtrees
     src/main.cpp
     src/Particle.cpp
     src/QuadTree.cpp
+    src/ComputeBackend.cpp
     src/Vector2d.cpp
+    src/Renderer.cpp
 )
 
 target_include_directories(quadtrees PRIVATE src)

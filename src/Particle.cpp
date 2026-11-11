@@ -2,17 +2,6 @@
 #include "Fail.h"
 
 #include <cmath>
-#include <cstdlib>
-
-void initParticle(Particle *particle) {
-    particle->position = {float(rand()) / float(RAND_MAX),
-                          float(rand()) / float(RAND_MAX)};
-    particle->velocity = {float(rand()) / float(RAND_MAX) - 0.5f,
-                          float(rand()) / float(RAND_MAX) - 0.5f};
-    particle->mass = (float(rand()) + 1.f) / (float(RAND_MAX) + 1.f);
-    particle->acceleration = {.0f, .0f};
-    particle->_pad = 0.f;
-}
 
 void move(Particle *particle, double dt) {
     if (!std::isfinite(dt) || dt < 0.0) {

@@ -1,100 +1,11 @@
 #include "QuadTree.h"
 #include "Fail.h"
-#include <CL/cl.h>
 #include <cmath>
-#include <cstdlib>
-#include <iostream>
-#include <string>
 
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 #define MIN_CELL_SIZE 1e-8f
 
-namespace {
-constexpr char kUpdatePositions[] = {
-#embed "kernels/updatePositions.cl"
-    , '\0'};
-constexpr char kComputeForces[] = {
-#embed "kernels/computeForces.cl"
-    , '\0'};
-} // namespace
-
-QuadTree::QuadTree(std::vector<Particle> &particles)
-    : _particles(particles), _context(nullptr), _queue(nullptr),
-      _particleBuffer(nullptr), _nodeBuffer(nullptr),
-      _updatePositionsKernel(nullptr), _computeForcesKernel(nullptr) {
-
-    if (_particles.empty()) {
-        fatal("cannot simulate an empty particle set");
-    }
-
-    cl_int status = CL_SUCCESS;
-    cl_uint platformCount = 0;
-    status = clGetPlatformIDs(0, nullptr, &platformCount);
-    checkError(status, "clGetPlatformIDs count");
-    if (platformCount == 0) {
-        fatal("no OpenCL platform found");
-    }
-
-    cl_platform_id platform = nullptr;
-    status = clGetPlatformIDs(1, &platform, nullptr);
-    checkError(status, "clGetPlatformIDs");
-
-    cl_device_id device = nullptr;
-    status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
-    checkError(status, "clGetDeviceIDs GPU");
-
-    _context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &status);
-    checkError(status, "clCreateContext");
-    _queue =
-        clCreateCommandQueueWithProperties(_context, device, nullptr, &status);
-    checkError(status, "clCreateCommandQueueWithProperties");
-
-    _particleBuffer =
-        clCreateBuffer(_context, CL_MEM_READ_WRITE,
-                       _particles.size() * sizeof(Particle), nullptr, &status);
-    checkError(status, "clCreateBuffer particles");
-    _globalDimensions = _particles.size();
-
-    _updatePositionsKernel =
-        buildKernel(device, kUpdatePositions, "updatePositions");
-    _computeForcesKernel = buildKernel(device, kComputeForces, "computeForces");
-}
-
-cl_kernel QuadTree::buildKernel(cl_device_id device, const char *source,
-                                const char *functionName) {
-
-    cl_int status = CL_SUCCESS;
-    cl_program program = clCreateProgramWithSource(
-        _context, 1, (const char **)&source, nullptr, &status);
-    checkError(status, "clCreateProgramWithSource");
-    status = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
-    checkBuildError(status, program, device);
-
-    cl_kernel kernel = clCreateKernel(program, functionName, &status);
-    checkError(status, "clCreateKernel");
-    return kernel;
-}
-
-void QuadTree::checkError(cl_int status, const char *what) {
-    if (status != CL_SUCCESS) {
-        std::cerr << "OpenCL error " << status << " in " << what << std::endl;
-        abort();
-    }
-}
-
-void QuadTree::checkBuildError(cl_int status, cl_program program,
-                               cl_device_id device) {
-    if (status != CL_SUCCESS) {
-        size_t logSize = 0;
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, nullptr,
-                              &logSize);
-        std::string log(logSize, '\0');
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logSize,
-                              log.data(), nullptr);
-        std::cerr << log << std::endl;
-        abort();
-    }
-}
+QuadTree::QuadTree(std::vector<Particle> &particles) : _particles(particles) {}
 
 void QuadTree::computeBounds() {
     _nodes.clear();
@@ -195,16 +106,6 @@ void QuadTree::build() {
         // insert
         _nodes[idx].particleIdx = i;
     }
-
-    if (_nodeBuffer != nullptr) {
-        checkError(clReleaseMemObject(_nodeBuffer), "clReleaseMemObject nodes");
-        _nodeBuffer = nullptr;
-    }
-    cl_int status = CL_SUCCESS;
-    _nodeBuffer =
-        clCreateBuffer(_context, CL_MEM_READ_WRITE,
-                       _nodes.size() * sizeof(QuadTreeNode), nullptr, &status);
-    checkError(status, "clCreateBuffer nodes");
 }
 
 void QuadTree::calculateMass() {
@@ -232,116 +133,6 @@ void QuadTree::calculateMass() {
                 _nodes[i].massCenter.y /= _nodes[i].mass;
             }
         }
-    }
-}
-
-void QuadTree::computeForces() {
-    if (_nodeBuffer == nullptr) {
-        fatal("force kernel ran before the tree buffer was created");
-    }
-    checkError(clEnqueueWriteBuffer(_queue, _particleBuffer, CL_TRUE, 0,
-                                    _particles.size() * sizeof(Particle),
-                                    _particles.data(), 0, nullptr, nullptr),
-               "clEnqueueWriteBuffer particles");
-    checkError(clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_TRUE, 0,
-                                    _nodes.size() * sizeof(QuadTreeNode),
-                                    _nodes.data(), 0, nullptr, nullptr),
-               "clEnqueueWriteBuffer nodes");
-
-    checkError(clSetKernelArg(_computeForcesKernel, 0, sizeof(cl_mem),
-                              &_particleBuffer),
-               "clSetKernelArg forces particles");
-    checkError(
-        clSetKernelArg(_computeForcesKernel, 1, sizeof(cl_mem), &_nodeBuffer),
-        "clSetKernelArg forces nodes");
-
-    checkError(clEnqueueNDRangeKernel(_queue, _computeForcesKernel, 1, nullptr,
-                                      &_globalDimensions, nullptr, 0, nullptr,
-                                      nullptr),
-               "clEnqueueNDRangeKernel computeForces");
-    checkError(clFinish(_queue), "clFinish computeForces");
-}
-
-void QuadTree::updatePositions(float dt) {
-    if (!std::isfinite(dt) || dt < 0.f) {
-        fatal("non-finite or negative integration step");
-    }
-    if (dt == 0.f) {
-        warn("skipped position update because dt is zero");
-        return;
-    }
-    checkError(clSetKernelArg(_updatePositionsKernel, 0, sizeof(cl_mem),
-                              &_particleBuffer),
-               "clSetKernelArg update particles");
-    checkError(clSetKernelArg(_updatePositionsKernel, 1, sizeof(float), &dt),
-               "clSetKernelArg update dt");
-    checkError(clEnqueueNDRangeKernel(_queue, _updatePositionsKernel, 1,
-                                      nullptr, &_globalDimensions, nullptr, 0,
-                                      nullptr, nullptr),
-               "clEnqueueNDRangeKernel updatePositions");
-    checkError(clEnqueueReadBuffer(_queue, _particleBuffer, CL_TRUE, 0,
-                                   _particles.size() * sizeof(Particle),
-                                   _particles.data(), 0, nullptr, nullptr),
-               "clEnqueueReadBuffer particles");
-    checkError(clFinish(_queue), "clFinish updatePositions");
-}
-
-void QuadTree::draw(sf::RenderWindow &window, bool transform, bool showGrid,
-                    bool showMassCenter) {
-    float2 scale;
-    float2 translation;
-    float particleScale;
-    if (transform) {
-        if (_nodes[0].dimentions.x <= 0.f || _nodes[0].dimentions.y <= 0.f) {
-            warn("skipped view transform because the root cell has "
-                 "non-positive size");
-            transform = false;
-        }
-    }
-    if (transform) {
-        scale = {window.getSize().x / _nodes[0].dimentions.x,
-                 window.getSize().y / _nodes[0].dimentions.y};
-        translation = {-_nodes[0].position.x * scale.x,
-                       -_nodes[0].position.y * scale.y};
-        particleScale = 1 / _nodes[0].dimentions.x;
-    } else {
-        scale = {window.getSize().x / 1.f, window.getSize().y / 1.f};
-        translation = {0.f * scale.x, 0.f * scale.y};
-        particleScale = 1;
-    }
-
-    if (showGrid) {
-        for (QuadTreeNode &node : _nodes) {
-            sf::RectangleShape r(sf::Vector2f(node.dimentions.x * scale.x,
-                                              node.dimentions.y * scale.y));
-            r.setPosition(
-                sf::Vector2f(node.position.x * scale.x + translation.x,
-                             node.position.y * scale.y + translation.y));
-            r.setOutlineThickness(1.f);
-            r.setFillColor(sf::Color::Black);
-            r.setOutlineColor(sf::Color(50, 50, 50));
-            window.draw(r);
-        }
-    }
-
-    for (Particle &particle : _particles) {
-        double radius = std::max(particle.mass * 5.f * particleScale, 1.f);
-        sf::CircleShape c(radius);
-        c.setPosition(sf::Vector2f(
-            particle.position.x * scale.x - radius + translation.x,
-            particle.position.y * scale.y - radius + translation.y));
-        c.setFillColor(sf::Color::White);
-        window.draw(c);
-    }
-
-    if (showMassCenter) {
-        int radius = 5;
-        sf::CircleShape c(radius);
-        c.setPosition(sf::Vector2f(
-            _nodes[0].massCenter.x * scale.x - radius + translation.x,
-            _nodes[0].massCenter.y * scale.y - radius + translation.y));
-        c.setFillColor(sf::Color::Red);
-        window.draw(c);
     }
 }
 

@@ -4,8 +4,8 @@
 #include <ctime>
 #include <iostream>
 
-#include "Particle.h"
-#include "QuadTree.h"
+#include "Renderer.h"
+#include "World.h"
 
 int main() {
     srand(time(NULL));
@@ -16,17 +16,8 @@ int main() {
     const unsigned int particleCount = 256;
 #endif
 
-    std::vector<Particle> particles;
-    particles.reserve(particleCount);
-    for (int i = 0; i < particleCount; i++) {
-        particles.emplace_back();
-        initParticle(&particles[i]);
-    }
-
-    QuadTree tree(particles);
-
-    const sf::Vector2u windowDimentions = {600, 600};
-    sf::RenderWindow window(sf::VideoMode(windowDimentions), "QuadTrees");
+    World world(particleCount);
+    Renderer renderer(600, 600);
 
     std::chrono::steady_clock::time_point begin =
         std::chrono::steady_clock::now();
@@ -35,12 +26,9 @@ int main() {
 
     int frameCount = 0;
 
-    while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>()) {
-                window.close();
-            }
-        }
+    while (renderer.isOpen()) {
+        renderer.pollClose();
+
         frameCount++;
         std::chrono::steady_clock::time_point end =
             std::chrono::steady_clock::now();
@@ -50,12 +38,7 @@ int main() {
             1000000.f;
         begin = end;
 
-        tree.computeBounds(); // reduction
-        tree.build();         // dick knows
-        tree.calculateMass(); // reduction?
-        // Apprioximately sort the bodies by spatial distnce missing
-        tree.computeForces();                      // simple paraler
-        tree.updatePositions(timeElapsed * 0.01f); // simple parallel
+        world.step(timeElapsed * 0.01f);
 
         std::chrono::steady_clock::time_point endFps =
             std::chrono::steady_clock::now();
@@ -70,10 +53,8 @@ int main() {
         if (frameCount / frameTime > 60) {
             beginFps = endFps;
             std::cout << "fps: " << frameCount / frameTime << '\n';
-
-            window.clear(sf::Color::Black);
-            tree.draw(window, false, true, false);
-            window.display();
+            renderer.draw(world.getParticles(), world.getNodes(), false, true,
+                          false);
             frameCount = 0;
         }
     }
