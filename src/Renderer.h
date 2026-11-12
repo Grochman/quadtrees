@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Particle.h"
-#include "QuadTree.h"
+#include "QuadTreeNode.h"
 #include <SFML/Graphics.hpp>
 
 class Renderer {

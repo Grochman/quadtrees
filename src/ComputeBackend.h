@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Particle.h"
-#include "QuadTree.h"
+#include "QuadTreeNode.h"
 #include <CL/cl.h>
 #include <vector>
 
@@ -12,6 +12,9 @@ class ComputeBackend {
     ComputeBackend(const ComputeBackend &) = delete;
     ComputeBackend &operator=(const ComputeBackend &) = delete;
 
+    void computeBounds(std::vector<QuadTreeNode> &nodes);
+    void build(std::vector<QuadTreeNode> &nodes);
+    void calculateMass(std::vector<QuadTreeNode> &nodes);
     void computeForces(std::vector<QuadTreeNode> &nodes);
     void updatePositions(float dt);
 
@@ -21,6 +24,8 @@ class ComputeBackend {
                          cl_device_id device);
     cl_device_id findGpu();
     void ensureNodeBuffer(size_t nodeCount);
+    bool contains(const QuadTreeNode *node, const Particle *particle);
+    int childIndex(const QuadTreeNode *node, const Particle *particle);
 
     std::vector<Particle> &_particles;
     cl_context _context;

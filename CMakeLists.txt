@@ -15,7 +15,6 @@ find_package(OpenCL REQUIRED)
 
 add_executable(quadtrees
     src/main.cpp
-    src/QuadTree.cpp
     src/ComputeBackend.cpp
     src/Renderer.cpp
 )

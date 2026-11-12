@@ -2,25 +2,23 @@
 
 #include "ComputeBackend.h"
 #include "Particle.h"
-#include "QuadTree.h"
+#include "QuadTreeNode.h"
 #include <vector>
 
 class World {
   public:
     World(unsigned int particleCount)
-        : _particles(makeParticles(particleCount)), _tree(_particles),
-          _backend(_particles) {}
+        : _particles(makeParticles(particleCount)), _backend(_particles) {}
     ~World() = default;
 
     std::vector<Particle> &getParticles() { return _particles; }
-    std::vector<QuadTreeNode> &getNodes() { return _tree.getNodes(); }
+    std::vector<QuadTreeNode> &getNodes() { return _nodes; }
 
     void step(float dt) {
-        _tree.computeBounds(); // reduction
-        _tree.build();         // dick knows
-        _tree.calculateMass(); // reduction?
-        // Apprioximately sort the bodies by spatial distnce missing
-        _backend.computeForces(_tree.getNodes());
+        _backend.computeBounds(_nodes);
+        _backend.build(_nodes);
+        _backend.calculateMass(_nodes);
+        _backend.computeForces(_nodes);
         _backend.updatePositions(dt);
     }
 
@@ -41,6 +39,6 @@ class World {
         return particles;
     }
     std::vector<Particle> _particles;
-    QuadTree _tree;
+    std::vector<QuadTreeNode> _nodes;
     ComputeBackend _backend;
 };
