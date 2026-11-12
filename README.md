@@ -43,12 +43,14 @@ Source `env-linux.sh` again in every new shell before building or running.
 ## Run
 
 ```bash
-./quadtrees [particleCount] [--transform] [--grid] [--no-grid] [--mass-center]
+./quadtrees [particleCount] [--opencl|--openmp] [--transform] [--grid] [--no-grid] [--mass-center]
 ```
 
 | Argument | Default | Meaning |
 | --- | --- | --- |
 | `particleCount` | `256` | Number of bodies. Must be a non-negative integer. |
+| `--opencl` | on | GPU forces and integrate. Tree build stays on the CPU. |
+| `--openmp` | off | Naive OpenMP: parallel bounds, forces, and integrate. Tree insert/COM stay serial. |
 | `--transform` | off | Scale the view to the root cell instead of the unit square. |
 | `--grid` | on | Draw quadtree cells. |
 | `--no-grid` | — | Hide quadtree cells. |
@@ -59,6 +61,7 @@ Examples:
 ```bash
 ./quadtrees
 ./quadtrees 1024
+./quadtrees 1024 --openmp --no-grid
 ./quadtrees 1024 --transform --mass-center --no-grid
 ```
 

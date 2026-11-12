@@ -17,11 +17,17 @@ constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
 constexpr float timeScale = 0.01f;
 
+constexpr const char *usage =
+    "usage: quadtrees [particleCount] [--opencl|--openmp] [--transform] "
+    "[--grid] [--no-grid] [--mass-center]";
+
 struct Options {
     unsigned int particleCount = defaultParticleCount;
+    ComputeBackendKind backendKind = ComputeBackendKind::OpenCL;
     bool transform = false;
     bool showGrid = true;
     bool showMassCenter = false;
+    bool backendSet = false;
 };
 
 unsigned int parseCount(const char *text) {
@@ -45,7 +51,16 @@ Options parseArgs(int argc, char **argv) {
     bool countSet = false;
 
     for (int i = 1; i < argc; i++) {
-        if (std::strcmp(argv[i], "--transform") == 0) {
+        if (std::strcmp(argv[i], "--opencl") == 0 ||
+            std::strcmp(argv[i], "--openmp") == 0) {
+            if (options.backendSet) {
+                fatal("specify only one of --opencl or --openmp");
+            }
+            options.backendKind = std::strcmp(argv[i], "--openmp") == 0
+                                      ? ComputeBackendKind::OpenMP
+                                      : ComputeBackendKind::OpenCL;
+            options.backendSet = true;
+        } else if (std::strcmp(argv[i], "--transform") == 0) {
             options.transform = true;
         } else if (std::strcmp(argv[i], "--grid") == 0) {
             options.showGrid = true;
@@ -54,11 +69,9 @@ Options parseArgs(int argc, char **argv) {
         } else if (std::strcmp(argv[i], "--mass-center") == 0) {
             options.showMassCenter = true;
         } else if (argv[i][0] == '-') {
-            fatal("usage: quadtrees [particleCount] [--transform] [--grid] "
-                  "[--no-grid] [--mass-center]");
+            fatal(usage);
         } else if (countSet) {
-            fatal("usage: quadtrees [particleCount] [--transform] [--grid] "
-                  "[--no-grid] [--mass-center]");
+            fatal(usage);
         } else {
             options.particleCount = parseCount(argv[i]);
             countSet = true;
@@ -83,7 +96,7 @@ int main(int argc, char **argv) {
     srand(time(NULL));
 
     const Options options = parseArgs(argc, argv);
-    World world(options.particleCount);
+    World world(options.particleCount, options.backendKind);
     Renderer renderer(windowSize, windowSize, options.transform,
                       options.showGrid, options.showMassCenter);
 
