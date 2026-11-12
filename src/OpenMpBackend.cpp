@@ -8,8 +8,9 @@
 #define MIN_DIST 0.1f
 #define THETA 0.5f
 
-OpenMpBackend::OpenMpBackend(std::vector<Particle> &particles)
-    : ComputeBackend(particles) {}
+OpenMpBackend::OpenMpBackend(std::vector<Particle> &particles,
+                             std::vector<QuadTreeNode> &nodes)
+    : ComputeBackend(particles, nodes) {}
 
 float2 OpenMpBackend::calculateForce(float2 distance, float mass,
                                      const Particle &particle) {
@@ -22,8 +23,7 @@ float2 OpenMpBackend::calculateForce(float2 distance, float mass,
     return {scale * unitVector.x, scale * unitVector.y};
 }
 
-float2 OpenMpBackend::totalForce(int particleIdx,
-                                 const std::vector<QuadTreeNode> &nodes) {
+float2 OpenMpBackend::totalForce(int particleIdx) {
     float2 force = {0.f, 0.f};
     int stack[MAX_STACK];
     int top = -1;
@@ -31,11 +31,11 @@ float2 OpenMpBackend::totalForce(int particleIdx,
     while (top > -1) {
         const int i = stack[top--];
 
-        if (nodes[i].particleIdx == particleIdx) {
+        if (_nodes[i].particleIdx == particleIdx) {
             continue;
         }
-        if (nodes[i].particleIdx != -1) {
-            const Particle &other = _particles[nodes[i].particleIdx];
+        if (_nodes[i].particleIdx != -1) {
+            const Particle &other = _particles[_nodes[i].particleIdx];
             const float2 r = {other.position.x -
                                   _particles[particleIdx].position.x,
                               other.position.y -
@@ -46,36 +46,36 @@ float2 OpenMpBackend::totalForce(int particleIdx,
             force.y += f.y;
             continue;
         }
-        const float s = nodes[i].dimensions.x;
+        const float s = _nodes[i].dimensions.x;
         const float dx =
-            nodes[i].massCenter.x - _particles[particleIdx].position.x;
+            _nodes[i].massCenter.x - _particles[particleIdx].position.x;
         const float dy =
-            nodes[i].massCenter.y - _particles[particleIdx].position.y;
+            _nodes[i].massCenter.y - _particles[particleIdx].position.y;
         const float d = std::hypot(dx, dy);
         if (d > 0.f && s / d < THETA) {
             const float2 r = {dx, dy};
             const float2 f =
-                calculateForce(r, nodes[i].mass, _particles[particleIdx]);
+                calculateForce(r, _nodes[i].mass, _particles[particleIdx]);
             force.x += f.x;
             force.y += f.y;
             continue;
         }
-        if (nodes[i].leavesIdx != -1) {
+        if (_nodes[i].leavesIdx != -1) {
             if (top + 4 >= MAX_STACK) {
                 continue;
             }
-            stack[++top] = nodes[i].leavesIdx;
-            stack[++top] = nodes[i].leavesIdx + 1;
-            stack[++top] = nodes[i].leavesIdx + 2;
-            stack[++top] = nodes[i].leavesIdx + 3;
+            stack[++top] = _nodes[i].leavesIdx;
+            stack[++top] = _nodes[i].leavesIdx + 1;
+            stack[++top] = _nodes[i].leavesIdx + 2;
+            stack[++top] = _nodes[i].leavesIdx + 3;
         }
     }
     return force;
 }
 
-void OpenMpBackend::computeBounds(std::vector<QuadTreeNode> &nodes) {
-    nodes.clear();
-    nodes.push_back(QuadTreeNode());
+void OpenMpBackend::computeBounds() {
+    _nodes.clear();
+    _nodes.push_back(QuadTreeNode());
     if (_particles.empty()) {
         return;
     }
@@ -101,17 +101,17 @@ void OpenMpBackend::computeBounds(std::vector<QuadTreeNode> &nodes) {
         bottom = std::max(bottom, _particles[i].position.y);
     }
 
-    nodes[0].position.x = left;
-    nodes[0].position.y = top;
-    nodes[0].dimensions.x = right - left + 0.0001f;
-    nodes[0].dimensions.y = bottom - top + 0.0001f;
+    _nodes[0].position.x = left;
+    _nodes[0].position.y = top;
+    _nodes[0].dimensions.x = right - left + 0.0001f;
+    _nodes[0].dimensions.y = bottom - top + 0.0001f;
 }
 
-void OpenMpBackend::computeForces(std::vector<QuadTreeNode> &nodes) {
+void OpenMpBackend::computeForces() {
     const int n = static_cast<int>(_particles.size());
 #pragma omp parallel for
     for (int i = 0; i < n; i++) {
-        const float2 force = totalForce(i, nodes);
+        const float2 force = totalForce(i);
         if (!(_particles[i].mass > 0.f)) {
             continue;
         }

@@ -5,10 +5,11 @@
 
 class OpenClBackend : public ComputeBackend {
   public:
-    explicit OpenClBackend(std::vector<Particle> &particles);
+    OpenClBackend(std::vector<Particle> &particles,
+                  std::vector<QuadTreeNode> &nodes);
     ~OpenClBackend() override;
 
-    void computeForces(std::vector<QuadTreeNode> &nodes) override;
+    void computeForces() override;
     void updatePositions(float dt) override;
 
   private:

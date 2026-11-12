@@ -15,10 +15,10 @@ class World {
     std::vector<QuadTreeNode> &getNodes() { return _nodes; }
 
     void step(float dt) {
-        _backend->computeBounds(_nodes);
-        _backend->build(_nodes);
-        _backend->calculateMass(_nodes);
-        _backend->computeForces(_nodes);
+        _backend->computeBounds();
+        _backend->build();
+        _backend->calculateMass();
+        _backend->computeForces();
         _backend->updatePositions(dt);
     }
 

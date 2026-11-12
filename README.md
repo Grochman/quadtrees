@@ -74,15 +74,6 @@ Examples:
 <img src="https://github.com/user-attachments/assets/29dbb7b3-954c-41f4-94b6-67001e117b2b" width=300>
 </p>
 
-## branches
-### main branches
-- master - primary branch with wip gpu integration
-- cpu - a more classic data structure approach
-### outdated branches
-- experimental - a quadtree data structure with the ability to update particle ownership without rebuilding the whole tree
-- overengeneered - exploration of template usage for mor flexible quadtree object
-- multithreading - naive, unfinished multithreading on cpu
-
 ## todo
 - OpenCL acceleration for tree building and computation of the bounding box and mass center
 - Implementation of particle sorting and further optimisation

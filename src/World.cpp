@@ -4,7 +4,7 @@
 
 World::World(unsigned int particleCount, ComputeBackendKind backendKind)
     : _particles(makeParticles(particleCount)),
-      _backend(createComputeBackend(backendKind, _particles)) {}
+      _backend(createComputeBackend(backendKind, _particles, _nodes)) {}
 
 std::vector<Particle> World::makeParticles(unsigned int particleCount) {
     std::vector<Particle> particles;

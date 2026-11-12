@@ -9,12 +9,13 @@
 #define ROUNDING_ERROR_CORRECTION 0.0001f
 #define MIN_CELL_SIZE 1e-8f
 
-ComputeBackend::ComputeBackend(std::vector<Particle> &particles)
-    : _particles(particles) {}
+ComputeBackend::ComputeBackend(std::vector<Particle> &particles,
+                               std::vector<QuadTreeNode> &nodes)
+    : _particles(particles), _nodes(nodes) {}
 
-void ComputeBackend::computeBounds(std::vector<QuadTreeNode> &nodes) {
-    nodes.clear();
-    nodes.push_back(QuadTreeNode());
+void ComputeBackend::computeBounds() {
+    _nodes.clear();
+    _nodes.push_back(QuadTreeNode());
     if (_particles.empty()) {
         return;
     }
@@ -35,32 +36,32 @@ void ComputeBackend::computeBounds(std::vector<QuadTreeNode> &nodes) {
         bottom = std::max(particle.position.y, bottom);
     }
 
-    nodes[0].position.x = left;
-    nodes[0].position.y = top;
-    nodes[0].dimensions.x = right - left + ROUNDING_ERROR_CORRECTION;
-    nodes[0].dimensions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].position.x = left;
+    _nodes[0].position.y = top;
+    _nodes[0].dimensions.x = right - left + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].dimensions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
 }
 
-void ComputeBackend::build(std::vector<QuadTreeNode> &nodes) {
+void ComputeBackend::build() {
     for (int i = 0; i < static_cast<int>(_particles.size()); i++) {
         Particle &particle = _particles[i];
-        if (!contains(&nodes[0], &particle)) {
+        if (!contains(&_nodes[0], &particle)) {
             fatal("particle is outside the root bounding box");
         }
 
         int idx = 0;
-        while (nodes[idx].leavesIdx != -1) {
-            idx = nodes[idx].leavesIdx + childIndex(&nodes[idx], &particle);
+        while (_nodes[idx].leavesIdx != -1) {
+            idx = _nodes[idx].leavesIdx + childIndex(&_nodes[idx], &particle);
         }
 
-        while (nodes[idx].particleIdx != -1) {
-            if (nodes[idx].dimensions.x < MIN_CELL_SIZE ||
-                nodes[idx].dimensions.y < MIN_CELL_SIZE) {
+        while (_nodes[idx].particleIdx != -1) {
+            if (_nodes[idx].dimensions.x < MIN_CELL_SIZE ||
+                _nodes[idx].dimensions.y < MIN_CELL_SIZE) {
                 fatal("quadtree cell underflow; particles are too close to "
                       "split");
             }
 
-            int particleIdx = nodes[idx].particleIdx;
+            int particleIdx = _nodes[idx].particleIdx;
             Particle *p = &_particles[particleIdx];
 
             if (p->position.x == particle.position.x &&
@@ -68,70 +69,70 @@ void ComputeBackend::build(std::vector<QuadTreeNode> &nodes) {
                 fatal("two particles have the exact same position");
             }
 
-            const int leavesIdx = static_cast<int>(nodes.size());
-            nodes[idx].leavesIdx = leavesIdx;
-            nodes[idx].particleIdx = -1;
+            const int leavesIdx = static_cast<int>(_nodes.size());
+            _nodes[idx].leavesIdx = leavesIdx;
+            _nodes[idx].particleIdx = -1;
 
             for (int child = 0; child < 4; child++) {
-                nodes.push_back(QuadTreeNode());
-                int newIdx = static_cast<int>(nodes.size()) - 1;
-                nodes[newIdx].dimensions = divide(nodes[idx].dimensions, 2.f);
+                _nodes.push_back(QuadTreeNode());
+                int newIdx = static_cast<int>(_nodes.size()) - 1;
+                _nodes[newIdx].dimensions = divide(_nodes[idx].dimensions, 2.f);
                 switch (child) {
                 case 0:
-                    nodes[newIdx].position = nodes[idx].position;
+                    _nodes[newIdx].position = _nodes[idx].position;
                     break;
                 case 1:
-                    nodes[newIdx].position = {nodes[idx].position.x +
-                                                  nodes[newIdx].dimensions.x,
-                                              nodes[idx].position.y};
+                    _nodes[newIdx].position = {_nodes[idx].position.x +
+                                                  _nodes[newIdx].dimensions.x,
+                                              _nodes[idx].position.y};
                     break;
                 case 2:
-                    nodes[newIdx].position = {nodes[idx].position.x,
-                                              nodes[idx].position.y +
-                                                  nodes[newIdx].dimensions.y};
+                    _nodes[newIdx].position = {_nodes[idx].position.x,
+                                              _nodes[idx].position.y +
+                                                  _nodes[newIdx].dimensions.y};
                     break;
                 default:
-                    nodes[newIdx].position = {
-                        nodes[idx].position.x + nodes[newIdx].dimensions.x,
-                        nodes[idx].position.y + nodes[newIdx].dimensions.y};
+                    _nodes[newIdx].position = {
+                        _nodes[idx].position.x + _nodes[newIdx].dimensions.x,
+                        _nodes[idx].position.y + _nodes[newIdx].dimensions.y};
                 }
             }
 
-            const int oldChild = leavesIdx + childIndex(&nodes[idx], p);
-            nodes[oldChild].particleIdx = particleIdx;
-            idx = leavesIdx + childIndex(&nodes[idx], &particle);
+            const int oldChild = leavesIdx + childIndex(&_nodes[idx], p);
+            _nodes[oldChild].particleIdx = particleIdx;
+            idx = leavesIdx + childIndex(&_nodes[idx], &particle);
         }
 
-        if (nodes[idx].leavesIdx != -1) {
+        if (_nodes[idx].leavesIdx != -1) {
             fatal("attempted to store a particle in an internal node");
         }
-        nodes[idx].particleIdx = i;
+        _nodes[idx].particleIdx = i;
     }
 }
 
-void ComputeBackend::calculateMass(std::vector<QuadTreeNode> &nodes) {
-    for (int i = static_cast<int>(nodes.size()) - 1; i >= 0; i--) {
-        if (nodes[i].particleIdx != -1) {
-            nodes[i].mass = _particles[nodes[i].particleIdx].mass;
-            nodes[i].massCenter = _particles[nodes[i].particleIdx].position;
-        } else if (nodes[i].leavesIdx == -1) {
-            nodes[i].mass = 0;
-            nodes[i].massCenter = {0, 0};
+void ComputeBackend::calculateMass() {
+    for (int i = static_cast<int>(_nodes.size()) - 1; i >= 0; i--) {
+        if (_nodes[i].particleIdx != -1) {
+            _nodes[i].mass = _particles[_nodes[i].particleIdx].mass;
+            _nodes[i].massCenter = _particles[_nodes[i].particleIdx].position;
+        } else if (_nodes[i].leavesIdx == -1) {
+            _nodes[i].mass = 0;
+            _nodes[i].massCenter = {0, 0};
         } else {
-            nodes[i].mass = 0;
-            nodes[i].massCenter = {0, 0};
+            _nodes[i].mass = 0;
+            _nodes[i].massCenter = {0, 0};
             for (int j = 0; j < 4; j++) {
-                const QuadTreeNode &child = nodes[nodes[i].leavesIdx + j];
+                const QuadTreeNode &child = _nodes[_nodes[i].leavesIdx + j];
                 if (child.mass == 0.f) {
                     continue;
                 }
-                nodes[i].massCenter.x += child.massCenter.x * child.mass;
-                nodes[i].massCenter.y += child.massCenter.y * child.mass;
-                nodes[i].mass += child.mass;
+                _nodes[i].massCenter.x += child.massCenter.x * child.mass;
+                _nodes[i].massCenter.y += child.massCenter.y * child.mass;
+                _nodes[i].mass += child.mass;
             }
-            if (nodes[i].mass != 0.f) {
-                nodes[i].massCenter.x /= nodes[i].mass;
-                nodes[i].massCenter.y /= nodes[i].mass;
+            if (_nodes[i].mass != 0.f) {
+                _nodes[i].massCenter.x /= _nodes[i].mass;
+                _nodes[i].massCenter.y /= _nodes[i].mass;
             }
         }
     }
@@ -164,12 +165,13 @@ int ComputeBackend::childIndex(const QuadTreeNode *node,
 
 std::unique_ptr<ComputeBackend>
 createComputeBackend(ComputeBackendKind kind,
-                     std::vector<Particle> &particles) {
+                     std::vector<Particle> &particles,
+                     std::vector<QuadTreeNode> &nodes) {
     switch (kind) {
     case ComputeBackendKind::OpenCL:
-        return std::make_unique<OpenClBackend>(particles);
+        return std::make_unique<OpenClBackend>(particles, nodes);
     case ComputeBackendKind::OpenMP:
-        return std::make_unique<OpenMpBackend>(particles);
+        return std::make_unique<OpenMpBackend>(particles, nodes);
     }
     fatal("unknown compute backend");
 }

@@ -4,14 +4,15 @@
 
 class OpenMpBackend : public ComputeBackend {
   public:
-    explicit OpenMpBackend(std::vector<Particle> &particles);
+    OpenMpBackend(std::vector<Particle> &particles,
+                  std::vector<QuadTreeNode> &nodes);
 
-    void computeBounds(std::vector<QuadTreeNode> &nodes) override;
-    void computeForces(std::vector<QuadTreeNode> &nodes) override;
+    void computeBounds() override;
+    void computeForces() override;
     void updatePositions(float dt) override;
 
   private:
     float2 calculateForce(float2 distance, float mass,
                           const Particle &particle);
-    float2 totalForce(int particleIdx, const std::vector<QuadTreeNode> &nodes);
+    float2 totalForce(int particleIdx);
 };

@@ -18,8 +18,9 @@ constexpr char computeForcesSource[] = {
     , '\0'};
 } // namespace
 
-OpenClBackend::OpenClBackend(std::vector<Particle> &particles)
-    : ComputeBackend(particles), _context(nullptr), _queue(nullptr),
+OpenClBackend::OpenClBackend(std::vector<Particle> &particles,
+                             std::vector<QuadTreeNode> &nodes)
+    : ComputeBackend(particles, nodes), _context(nullptr), _queue(nullptr),
       _program(nullptr), _particleBuffer(nullptr), _nodeBuffer(nullptr),
       _globalDimensions(particles.size()), _nodeCapacity(0),
       _updatePositionsKernel(nullptr), _computeForcesKernel(nullptr) {
@@ -144,20 +145,20 @@ void OpenClBackend::ensureNodeBuffer(size_t nodeCount) {
         "clSetKernelArg forces nodes");
 }
 
-void OpenClBackend::computeForces(std::vector<QuadTreeNode> &nodes) {
+void OpenClBackend::computeForces() {
     if (_globalDimensions == 0) {
         return;
     }
 
-    ensureNodeBuffer(nodes.size());
+    ensureNodeBuffer(_nodes.size());
 
     checkError(clEnqueueWriteBuffer(_queue, _particleBuffer, CL_FALSE, 0,
                                     _particles.size() * sizeof(Particle),
                                     _particles.data(), 0, nullptr, nullptr),
                "clEnqueueWriteBuffer particles");
     checkError(clEnqueueWriteBuffer(_queue, _nodeBuffer, CL_FALSE, 0,
-                                    nodes.size() * sizeof(QuadTreeNode),
-                                    nodes.data(), 0, nullptr, nullptr),
+                                    _nodes.size() * sizeof(QuadTreeNode),
+                                    _nodes.data(), 0, nullptr, nullptr),
                "clEnqueueWriteBuffer nodes");
 
     checkError(clEnqueueNDRangeKernel(_queue, _computeForcesKernel, 1, nullptr,

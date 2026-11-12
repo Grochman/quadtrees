@@ -13,15 +13,17 @@ class ComputeBackend {
     ComputeBackend(const ComputeBackend &) = delete;
     ComputeBackend &operator=(const ComputeBackend &) = delete;
 
-    virtual void computeBounds(std::vector<QuadTreeNode> &nodes);
-    virtual void build(std::vector<QuadTreeNode> &nodes);
-    virtual void calculateMass(std::vector<QuadTreeNode> &nodes);
-    virtual void computeForces(std::vector<QuadTreeNode> &nodes) = 0;
+    virtual void computeBounds();
+    virtual void build();
+    virtual void calculateMass();
+    virtual void computeForces() = 0;
     virtual void updatePositions(float dt) = 0;
 
   protected:
-    explicit ComputeBackend(std::vector<Particle> &particles);
+    ComputeBackend(std::vector<Particle> &particles,
+                   std::vector<QuadTreeNode> &nodes);
     std::vector<Particle> &_particles;
+    std::vector<QuadTreeNode> &_nodes;
 
   private:
     bool contains(const QuadTreeNode *node, const Particle *particle);
@@ -30,4 +32,5 @@ class ComputeBackend {
 
 std::unique_ptr<ComputeBackend>
 createComputeBackend(ComputeBackendKind kind,
-                     std::vector<Particle> &particles);
+                     std::vector<Particle> &particles,
+                     std::vector<QuadTreeNode> &nodes);
