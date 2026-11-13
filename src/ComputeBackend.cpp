@@ -3,7 +3,6 @@
 #include "OpenClBackend.h"
 #include "OpenMpBackend.h"
 #include "Vector2d.h"
-
 #include <cmath>
 
 #define ROUNDING_ERROR_CORRECTION 0.0001f
@@ -45,10 +44,6 @@ void ComputeBackend::computeBounds() {
 void ComputeBackend::build() {
     for (int i = 0; i < static_cast<int>(_particles.size()); i++) {
         Particle &particle = _particles[i];
-        if (!contains(&_nodes[0], &particle)) {
-            fatal("particle is outside the root bounding box");
-        }
-
         int idx = 0;
         while (_nodes[idx].leavesIdx != -1) {
             idx = _nodes[idx].leavesIdx + childIndex(&_nodes[idx], &particle);
@@ -138,19 +133,8 @@ void ComputeBackend::calculateMass() {
     }
 }
 
-bool ComputeBackend::contains(const QuadTreeNode *node,
-                              const Particle *particle) {
-    return particle->position.x >= node->position.x &&
-           particle->position.y >= node->position.y &&
-           particle->position.x <= node->position.x + node->dimensions.x &&
-           particle->position.y <= node->position.y + node->dimensions.y;
-}
-
 int ComputeBackend::childIndex(const QuadTreeNode *node,
                                const Particle *particle) {
-    if (!contains(node, particle)) {
-        fatal("particle is not inside the node used for child selection");
-    }
     const float midX = node->position.x + node->dimensions.x * 0.5f;
     const float midY = node->position.y + node->dimensions.y * 0.5f;
     int index = 0;

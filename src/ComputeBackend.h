@@ -26,7 +26,6 @@ class ComputeBackend {
     std::vector<QuadTreeNode> &_nodes;
 
   private:
-    bool contains(const QuadTreeNode *node, const Particle *particle);
     int childIndex(const QuadTreeNode *node, const Particle *particle);
 };
 
