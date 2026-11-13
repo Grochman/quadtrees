@@ -1,8 +1,8 @@
 ﻿#include <cerrno>
 #include <chrono>
 #include <climits>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <iostream>
 
@@ -16,6 +16,7 @@ using Clock = std::chrono::steady_clock;
 constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
 constexpr float timeScale = 0.01f;
+constexpr float stepsReportInterval = 1.f;
 
 constexpr const char *usage =
     "usage: quadtrees [particleCount] [--opencl|--openmp] [--transform] "
@@ -90,6 +91,16 @@ float restart(Clock::time_point &mark) {
     mark = now;
     return seconds;
 }
+
+float timeSince(Clock::time_point &mark) {
+    const Clock::time_point now = Clock::now();
+    const float seconds =
+        std::chrono::duration_cast<std::chrono::microseconds>(now - mark)
+            .count() /
+        1000000.f;
+    return seconds;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -101,16 +112,24 @@ int main(int argc, char **argv) {
                       options.showGrid, options.showMassCenter);
 
     Clock::time_point lastStep = Clock::now();
+    Clock::time_point lastReport = lastStep;
+    int stepsSinceReport = 0;
 
     while (renderer.isOpen()) {
         renderer.pollClose();
 
         const float dt = restart(lastStep);
         world.step(dt * timeScale);
+        ++stepsSinceReport;
 
-        if (dt > 0.f) {
-            std::cout << "steps/s: " << 1.f / dt << '\n';
+        const float reportElapsed = timeSince(lastReport);
+        if (reportElapsed >= stepsReportInterval) {
+            std::cout << "steps/s: " << stepsSinceReport / reportElapsed
+                      << '\n';
+            lastReport = Clock::now();
+            stepsSinceReport = 0;
         }
+
         renderer.draw(world.getParticles(), world.getNodes());
     }
 
