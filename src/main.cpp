@@ -17,6 +17,7 @@ constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
 constexpr float timeScale = 0.01f;
 constexpr float stepsReportInterval = 1.f;
+constexpr float dt = 0.01f;
 
 constexpr const char *usage =
     "usage: quadtrees [particleCount] [--opencl|--openmp] [--transform] "
@@ -114,13 +115,17 @@ int main(int argc, char **argv) {
     Clock::time_point lastStep = Clock::now();
     Clock::time_point lastReport = lastStep;
     int stepsSinceReport = 0;
+    float lag = 0.f;
 
     while (renderer.isOpen()) {
         renderer.pollClose();
 
-        const float dt = restart(lastStep);
-        world.step(dt * timeScale);
-        ++stepsSinceReport;
+        lag += restart(lastStep);
+        while (lag >= dt) {
+            world.step(dt);
+            lag -= dt;
+            ++stepsSinceReport;
+        }
 
         const float reportElapsed = timeSince(lastReport);
         if (reportElapsed >= stepsReportInterval) {
