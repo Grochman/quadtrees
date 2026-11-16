@@ -1,6 +1,8 @@
-﻿#include <cerrno>
+﻿#include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <climits>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -16,12 +18,12 @@ using Clock = std::chrono::steady_clock;
 constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
 constexpr float stepsReportInterval = 1.f;
-constexpr float dt = 0.01f;
-constexpr float timeScale = 0.01f;
+constexpr float tick = 0.01f;
+constexpr float maxCatchUp = 0.1f;
 
 constexpr const char *usage =
-    "usage: quadtrees [particleCount] [--opencl|--openmp] [--transform] "
-    "[--grid] [--no-grid] [--mass-center]";
+    "usage: quadtrees [particleCount] [--opencl|--openmp] [--no-transform] "
+    "[--no-grid] [--mass-center] [--time-scale <s>]";
 
 struct Options {
     unsigned int particleCount = defaultParticleCount;
@@ -29,6 +31,7 @@ struct Options {
     bool transform = true;
     bool showGrid = true;
     bool showMassCenter = false;
+    float timeScale = 1;
 };
 
 unsigned int parseCount(const char *text) {
@@ -47,6 +50,17 @@ unsigned int parseCount(const char *text) {
     return static_cast<unsigned int>(parsed);
 }
 
+float parseTimeScale(const char *text) {
+    char *end = nullptr;
+    errno = 0;
+    const float parsed = std::strtof(text, &end);
+    if (end == text || *end != '\0' || errno == ERANGE ||
+        !std::isfinite(parsed) || parsed < 0.f) {
+        fatal("time scale must be a non-negative finite number");
+    }
+    return parsed;
+}
+
 Options parseArgs(int argc, char **argv) {
     Options options;
 
@@ -62,6 +76,12 @@ Options parseArgs(int argc, char **argv) {
             options.showGrid = false;
         } else if (std::strcmp(argv[i], "--mass-center") == 0) {
             options.showMassCenter = true;
+        } else if (std::strcmp(argv[i], "--time-scale") == 0) {
+            if (i + 1 >= argc) {
+                fatal(usage);
+            }
+            ++i;
+            options.timeScale = parseTimeScale(argv[i]);
         } else if (argv[i][0] == '-') {
             fatal(usage);
         } else {
@@ -110,9 +130,10 @@ int main(int argc, char **argv) {
         renderer.pollClose();
 
         lag += restart(lastStep);
-        while (lag >= dt) {
-            world.step(dt * timeScale);
-            lag -= dt;
+        lag = std::min(lag, maxCatchUp);
+        while (lag >= tick) {
+            world.step(tick * options.timeScale);
+            lag -= tick;
             ++stepsSinceReport;
         }
 
