@@ -24,12 +24,11 @@ class ComputeBackend {
                    std::vector<QuadTreeNode> &nodes);
     std::vector<Particle> &_particles;
     std::vector<QuadTreeNode> &_nodes;
-
-  private:
     int childIndex(const QuadTreeNode *node, const Particle *particle);
+    void splitNode(int idx);
+    void insertParticle(int particleIdx);
 };
 
 std::unique_ptr<ComputeBackend>
-createComputeBackend(ComputeBackendKind kind,
-                     std::vector<Particle> &particles,
+createComputeBackend(ComputeBackendKind kind, std::vector<Particle> &particles,
                      std::vector<QuadTreeNode> &nodes);

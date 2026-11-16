@@ -41,67 +41,75 @@ void ComputeBackend::computeBounds() {
     _nodes[0].dimensions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
 }
 
+void ComputeBackend::splitNode(int idx) {
+    const int leavesIdx = static_cast<int>(_nodes.size());
+    _nodes[idx].leavesIdx = leavesIdx;
+    _nodes[idx].particleIdx = -1;
+
+    for (int child = 0; child < 4; child++) {
+        _nodes.push_back(QuadTreeNode());
+        int newIdx = static_cast<int>(_nodes.size()) - 1;
+        _nodes[newIdx].dimensions = divide(_nodes[idx].dimensions, 2.f);
+        switch (child) {
+        case 0:
+            _nodes[newIdx].position = _nodes[idx].position;
+            break;
+        case 1:
+            _nodes[newIdx].position = {_nodes[idx].position.x +
+                                           _nodes[newIdx].dimensions.x,
+                                       _nodes[idx].position.y};
+            break;
+        case 2:
+            _nodes[newIdx].position = {_nodes[idx].position.x,
+                                       _nodes[idx].position.y +
+                                           _nodes[newIdx].dimensions.y};
+            break;
+        default:
+            _nodes[newIdx].position = {
+                _nodes[idx].position.x + _nodes[newIdx].dimensions.x,
+                _nodes[idx].position.y + _nodes[newIdx].dimensions.y};
+        }
+    }
+}
+
+void ComputeBackend::insertParticle(int particleIdx) {
+    Particle &particle = _particles[particleIdx];
+    int idx = 0;
+    while (_nodes[idx].leavesIdx != -1) {
+        idx = _nodes[idx].leavesIdx + childIndex(&_nodes[idx], &particle);
+    }
+
+    while (_nodes[idx].particleIdx != -1) {
+        if (_nodes[idx].dimensions.x < MIN_CELL_SIZE ||
+            _nodes[idx].dimensions.y < MIN_CELL_SIZE) {
+            fatal("quadtree cell underflow; particles are too close to split");
+        }
+
+        const int oldParticleIdx = _nodes[idx].particleIdx;
+        Particle *p = &_particles[oldParticleIdx];
+
+        if (p->position.x == particle.position.x &&
+            p->position.y == particle.position.y) {
+            fatal("two particles have the exact same position");
+        }
+
+        splitNode(idx);
+
+        const int leavesIdx = _nodes[idx].leavesIdx;
+        _nodes[leavesIdx + childIndex(&_nodes[idx], p)].particleIdx =
+            oldParticleIdx;
+        idx = leavesIdx + childIndex(&_nodes[idx], &particle);
+    }
+
+    if (_nodes[idx].leavesIdx != -1) {
+        fatal("attempted to store a particle in an internal node");
+    }
+    _nodes[idx].particleIdx = particleIdx;
+}
+
 void ComputeBackend::build() {
     for (int i = 0; i < static_cast<int>(_particles.size()); i++) {
-        Particle &particle = _particles[i];
-        int idx = 0;
-        while (_nodes[idx].leavesIdx != -1) {
-            idx = _nodes[idx].leavesIdx + childIndex(&_nodes[idx], &particle);
-        }
-
-        while (_nodes[idx].particleIdx != -1) {
-            if (_nodes[idx].dimensions.x < MIN_CELL_SIZE ||
-                _nodes[idx].dimensions.y < MIN_CELL_SIZE) {
-                fatal("quadtree cell underflow; particles are too close to "
-                      "split");
-            }
-
-            int particleIdx = _nodes[idx].particleIdx;
-            Particle *p = &_particles[particleIdx];
-
-            if (p->position.x == particle.position.x &&
-                p->position.y == particle.position.y) {
-                fatal("two particles have the exact same position");
-            }
-
-            const int leavesIdx = static_cast<int>(_nodes.size());
-            _nodes[idx].leavesIdx = leavesIdx;
-            _nodes[idx].particleIdx = -1;
-
-            for (int child = 0; child < 4; child++) {
-                _nodes.push_back(QuadTreeNode());
-                int newIdx = static_cast<int>(_nodes.size()) - 1;
-                _nodes[newIdx].dimensions = divide(_nodes[idx].dimensions, 2.f);
-                switch (child) {
-                case 0:
-                    _nodes[newIdx].position = _nodes[idx].position;
-                    break;
-                case 1:
-                    _nodes[newIdx].position = {_nodes[idx].position.x +
-                                                  _nodes[newIdx].dimensions.x,
-                                              _nodes[idx].position.y};
-                    break;
-                case 2:
-                    _nodes[newIdx].position = {_nodes[idx].position.x,
-                                              _nodes[idx].position.y +
-                                                  _nodes[newIdx].dimensions.y};
-                    break;
-                default:
-                    _nodes[newIdx].position = {
-                        _nodes[idx].position.x + _nodes[newIdx].dimensions.x,
-                        _nodes[idx].position.y + _nodes[newIdx].dimensions.y};
-                }
-            }
-
-            const int oldChild = leavesIdx + childIndex(&_nodes[idx], p);
-            _nodes[oldChild].particleIdx = particleIdx;
-            idx = leavesIdx + childIndex(&_nodes[idx], &particle);
-        }
-
-        if (_nodes[idx].leavesIdx != -1) {
-            fatal("attempted to store a particle in an internal node");
-        }
-        _nodes[idx].particleIdx = i;
+        insertParticle(i);
     }
 }
 
@@ -148,8 +156,7 @@ int ComputeBackend::childIndex(const QuadTreeNode *node,
 }
 
 std::unique_ptr<ComputeBackend>
-createComputeBackend(ComputeBackendKind kind,
-                     std::vector<Particle> &particles,
+createComputeBackend(ComputeBackendKind kind, std::vector<Particle> &particles,
                      std::vector<QuadTreeNode> &nodes) {
     switch (kind) {
     case ComputeBackendKind::OpenCL:

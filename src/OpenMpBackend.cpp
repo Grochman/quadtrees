@@ -36,10 +36,9 @@ float2 OpenMpBackend::totalForce(int particleIdx) {
         }
         if (_nodes[i].particleIdx != -1) {
             const Particle &other = _particles[_nodes[i].particleIdx];
-            const float2 r = {other.position.x -
-                                  _particles[particleIdx].position.x,
-                              other.position.y -
-                                  _particles[particleIdx].position.y};
+            const float2 r = {
+                other.position.x - _particles[particleIdx].position.x,
+                other.position.y - _particles[particleIdx].position.y};
             const float2 f =
                 calculateForce(r, other.mass, _particles[particleIdx]);
             force.x += f.x;
@@ -93,8 +92,9 @@ void OpenMpBackend::computeBounds() {
     float bottom = _particles[0].position.y;
     const int n = static_cast<int>(_particles.size());
 
-#pragma omp parallel for reduction(min : left, top) reduction(max : right, bottom)
-    for (int i = 0; i < n; i++) {
+#pragma omp parallel for reduction(min : left, top)                            \
+    reduction(max : right, bottom)
+    for (int i = 1; i < n; i++) {
         left = std::min(left, _particles[i].position.x);
         right = std::max(right, _particles[i].position.x);
         top = std::min(top, _particles[i].position.y);
@@ -105,6 +105,60 @@ void OpenMpBackend::computeBounds() {
     _nodes[0].position.y = top;
     _nodes[0].dimensions.x = right - left + 0.0001f;
     _nodes[0].dimensions.y = bottom - top + 0.0001f;
+}
+
+void OpenMpBackend::accumulateMass(int nodeIdx, int depth) {
+    QuadTreeNode &node = _nodes[nodeIdx];
+    if (node.particleIdx != -1) {
+        node.mass = _particles[node.particleIdx].mass;
+        node.massCenter = _particles[node.particleIdx].position;
+        return;
+    }
+    if (node.leavesIdx == -1) {
+        node.mass = 0;
+        node.massCenter = {0, 0};
+        return;
+    }
+
+    const int firstChildNodeIdx = node.leavesIdx;
+    if (depth < 8) {
+        for (int j = 0; j < 4; j++) {
+#pragma omp task firstprivate(j)
+            accumulateMass(firstChildNodeIdx + j, depth + 1);
+        }
+#pragma omp taskwait
+    } else {
+        for (int j = 0; j < 4; j++) {
+            accumulateMass(firstChildNodeIdx + j, depth + 1);
+        }
+    }
+
+    node.mass = 0;
+    node.massCenter = {0, 0};
+    for (int j = 0; j < 4; j++) {
+        const QuadTreeNode &child = _nodes[firstChildNodeIdx + j];
+        if (child.mass == 0.f) {
+            continue;
+        }
+        node.massCenter.x += child.massCenter.x * child.mass;
+        node.massCenter.y += child.massCenter.y * child.mass;
+        node.mass += child.mass;
+    }
+    if (node.mass != 0.f) {
+        node.massCenter.x /= node.mass;
+        node.massCenter.y /= node.mass;
+    }
+}
+
+void OpenMpBackend::calculateMass() {
+    if (_nodes.empty()) {
+        return;
+    }
+#pragma omp parallel
+    {
+#pragma omp single
+        accumulateMass(0, 0);
+    }
 }
 
 void OpenMpBackend::computeForces() {

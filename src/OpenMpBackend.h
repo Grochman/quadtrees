@@ -8,6 +8,7 @@ class OpenMpBackend : public ComputeBackend {
                   std::vector<QuadTreeNode> &nodes);
 
     void computeBounds() override;
+    void calculateMass() override;
     void computeForces() override;
     void updatePositions(float dt) override;
 
@@ -15,4 +16,5 @@ class OpenMpBackend : public ComputeBackend {
     float2 calculateForce(float2 distance, float mass,
                           const Particle &particle);
     float2 totalForce(int particleIdx);
+    void accumulateMass(int nodeIdx, int depth);
 };

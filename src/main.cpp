@@ -15,7 +15,6 @@ using Clock = std::chrono::steady_clock;
 
 constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
-constexpr float timeScale = 0.01f;
 constexpr float stepsReportInterval = 1.f;
 constexpr float dt = 0.01f;
 
