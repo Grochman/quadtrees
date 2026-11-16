@@ -5,7 +5,6 @@
 #include "Vector2d.h"
 #include <cmath>
 
-#define ROUNDING_ERROR_CORRECTION 0.0001f
 #define MIN_CELL_SIZE 1e-8f
 
 ComputeBackend::ComputeBackend(std::vector<Particle> &particles,
@@ -37,8 +36,8 @@ void ComputeBackend::computeBounds() {
 
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
-    _nodes[0].dimensions.x = right - left + ROUNDING_ERROR_CORRECTION;
-    _nodes[0].dimensions.y = bottom - top + ROUNDING_ERROR_CORRECTION;
+    _nodes[0].dimensions.x = right - left;
+    _nodes[0].dimensions.y = bottom - top;
 }
 
 void ComputeBackend::splitNode(int idx) {

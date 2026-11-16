@@ -103,8 +103,8 @@ void OpenMpBackend::computeBounds() {
 
     _nodes[0].position.x = left;
     _nodes[0].position.y = top;
-    _nodes[0].dimensions.x = right - left + 0.0001f;
-    _nodes[0].dimensions.y = bottom - top + 0.0001f;
+    _nodes[0].dimensions.x = right - left;
+    _nodes[0].dimensions.y = bottom - top;
 }
 
 void OpenMpBackend::accumulateMass(int nodeIdx, int depth) {

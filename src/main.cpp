@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "Fail.h"
-#include "Renderer.h"
+#include "OpenGlRenderer.h"
 #include "World.h"
 
 namespace {
@@ -17,6 +17,7 @@ constexpr unsigned int defaultParticleCount = 256;
 constexpr unsigned int windowSize = 600;
 constexpr float stepsReportInterval = 1.f;
 constexpr float dt = 0.01f;
+constexpr float timeScale = 0.01f;
 
 constexpr const char *usage =
     "usage: quadtrees [particleCount] [--opencl|--openmp] [--transform] "
@@ -25,10 +26,9 @@ constexpr const char *usage =
 struct Options {
     unsigned int particleCount = defaultParticleCount;
     ComputeBackendKind backendKind = ComputeBackendKind::OpenCL;
-    bool transform = false;
+    bool transform = true;
     bool showGrid = true;
     bool showMassCenter = false;
-    bool backendSet = false;
 };
 
 unsigned int parseCount(const char *text) {
@@ -49,33 +49,23 @@ unsigned int parseCount(const char *text) {
 
 Options parseArgs(int argc, char **argv) {
     Options options;
-    bool countSet = false;
 
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "--opencl") == 0 ||
             std::strcmp(argv[i], "--openmp") == 0) {
-            if (options.backendSet) {
-                fatal("specify only one of --opencl or --openmp");
-            }
             options.backendKind = std::strcmp(argv[i], "--openmp") == 0
                                       ? ComputeBackendKind::OpenMP
                                       : ComputeBackendKind::OpenCL;
-            options.backendSet = true;
-        } else if (std::strcmp(argv[i], "--transform") == 0) {
-            options.transform = true;
-        } else if (std::strcmp(argv[i], "--grid") == 0) {
-            options.showGrid = true;
+        } else if (std::strcmp(argv[i], "--no-transform") == 0) {
+            options.transform = false;
         } else if (std::strcmp(argv[i], "--no-grid") == 0) {
             options.showGrid = false;
         } else if (std::strcmp(argv[i], "--mass-center") == 0) {
             options.showMassCenter = true;
         } else if (argv[i][0] == '-') {
             fatal(usage);
-        } else if (countSet) {
-            fatal(usage);
         } else {
             options.particleCount = parseCount(argv[i]);
-            countSet = true;
         }
     }
 
@@ -108,8 +98,8 @@ int main(int argc, char **argv) {
 
     const Options options = parseArgs(argc, argv);
     World world(options.particleCount, options.backendKind);
-    Renderer renderer(windowSize, windowSize, options.transform,
-                      options.showGrid, options.showMassCenter);
+    OpenGlRenderer renderer(windowSize, windowSize, options.transform,
+                            options.showGrid, options.showMassCenter);
 
     Clock::time_point lastStep = Clock::now();
     Clock::time_point lastReport = lastStep;
@@ -121,7 +111,7 @@ int main(int argc, char **argv) {
 
         lag += restart(lastStep);
         while (lag >= dt) {
-            world.step(dt);
+            world.step(dt * timeScale);
             lag -= dt;
             ++stepsSinceReport;
         }

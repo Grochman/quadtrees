@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(SFML 3 CONFIG REQUIRED COMPONENTS Graphics Window System)
+find_package(OpenGL REQUIRED)
 find_package(OpenCL REQUIRED)
 find_package(OpenMP REQUIRED)
 
@@ -21,6 +22,7 @@ add_executable(quadtrees
     src/OpenClBackend.cpp
     src/OpenMpBackend.cpp
     src/Renderer.cpp
+    src/OpenGlRenderer.cpp
 )
 
 target_include_directories(quadtrees PRIVATE src)
@@ -30,6 +32,7 @@ target_link_libraries(quadtrees PRIVATE
     SFML::Graphics
     SFML::Window
     SFML::System
+    OpenGL::GL
     OpenCL::OpenCL
     OpenMP::OpenMP_CXX
 )
