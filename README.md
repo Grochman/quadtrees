@@ -1,15 +1,15 @@
 # quadtrees
-N-body simulation done as a OpenCL learning exercise (all my notes: https://grochman.github.io/OpenCL_notes/). 
 
 ## features
 - Barnes-Hut algorithm implementation
 - Leapfrog integration
-- quadtree visualization (SFML)
+- quadtree visualization (OpenGL)
+- full openMp acceleration
 - basic GPU acceleration
 
 ## Build
 
-The simulation is C++23. It links SFML 3 for the window and OpenCL for the force and integration steps. Kernel sources in `src/kernels/` are embedded with `#embed`, so the binary does not load `.cl` files at run time. The build is CMake on Linux.
+The simulation is C++23, built with CMake on Linux. SFML 3 owns the window and the OpenGL 3.3 context; drawing is OpenGL (`src/shaders/`). Compute is either OpenMP (CPU) or OpenCL (GPU forces and integrate). OpenCL kernels in `src/kernels/` and the GLSL shaders are embedded with `#embed`, so the binary does not load `.cl` or shader files at run time.
 
 ### With sudo
 
@@ -78,13 +78,11 @@ Examples:
 - OpenCL acceleration for tree building and computation of the bounding box and mass center
 - Implementation of particle sorting and further optimisation
 - visualization improvements:
-  - OpenGL
   - particle trails
   - density based
   - intuitive zoomout 
 - exploration of different integration methods (rk4)
 - collisions
-- OpenMP cpu multithreading
 
 ## resources
 - [The Barnes-Hut Algorithm](https://arborjs.org/docs/barnes-hut)
