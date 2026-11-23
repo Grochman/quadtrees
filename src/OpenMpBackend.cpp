@@ -1,5 +1,6 @@
 #include "OpenMpBackend.h"
 #include "Fail.h"
+#include "Vector2d.h"
 
 #include <cmath>
 #include <omp.h>
@@ -7,6 +8,9 @@
 #define MAX_STACK 64
 #define MIN_DIST 0.1f
 #define THETA 0.5f
+#define MIN_CELL_SIZE 1e-8f
+#define BUILD_NODE_CAP_PER_PARTICLE 64
+#define BUILD_TASK_GRAIN 64
 
 OpenMpBackend::OpenMpBackend(std::vector<Particle> &particles,
                              std::vector<QuadTreeNode> &nodes)
@@ -105,6 +109,125 @@ void OpenMpBackend::computeBounds() {
     _nodes[0].position.y = top;
     _nodes[0].dimensions.x = right - left;
     _nodes[0].dimensions.y = bottom - top;
+}
+
+int OpenMpBackend::allocChildren() {
+    int first;
+    // get the next free node index and increment atomically
+#pragma omp atomic capture
+    first = _nextNode += 4;
+    first -= 4;
+    if (first + 4 > static_cast<int>(_nodes.size())) {
+        fatal("quadtree node pool overflow");
+    }
+    return first;
+}
+
+void OpenMpBackend::initChildBoxes(int parentIdx, int firstChild) {
+    const QuadTreeNode &parent = _nodes[parentIdx];
+    const float2 half = divide(parent.dimensions, 2.f);
+    for (int child = 0; child < 4; child++) {
+        QuadTreeNode &node = _nodes[firstChild + child];
+        node = QuadTreeNode();
+        node.dimensions = half;
+        switch (child) {
+        case 0:
+            node.position = parent.position;
+            break;
+        case 1:
+            node.position = {parent.position.x + half.x, parent.position.y};
+            break;
+        case 2:
+            node.position = {parent.position.x, parent.position.y + half.y};
+            break;
+        default:
+            node.position = {parent.position.x + half.x,
+                             parent.position.y + half.y};
+        }
+    }
+}
+
+void OpenMpBackend::partitionRange(int nodeIdx, int begin, int end,
+                                   int splits[5]) {
+    int counts[4] = {0, 0, 0, 0}; // count of particles in each quadrant
+    for (int i = begin; i < end; i++) {
+        counts[childIndex(&_nodes[nodeIdx], &_particles[_order[i]])]++;
+    }
+    splits[0] = begin;
+    for (int q = 0; q < 4; q++) { // update splits to reflect the new ranges
+        splits[q + 1] = splits[q] + counts[q];
+    }
+    int cursor[4] = {splits[0], splits[1], splits[2], splits[3]};
+    // go over all, get quad, put in new position, increment cursor for scratch
+    for (int i = begin; i < end; i++) {
+        const int q = childIndex(&_nodes[nodeIdx], &_particles[_order[i]]);
+        _orderScratch[cursor[q]++] = _order[i];
+    }
+    for (int i = begin; i < end; i++) {
+        _order[i] = _orderScratch[i];
+    }
+}
+
+void OpenMpBackend::buildSubtree(int nodeIdx, int begin, int end) {
+    if (end - begin <= 0) { // empty node
+        return;
+    }
+    if (end - begin == 1) { // single particle node
+        _nodes[nodeIdx].particleIdx = _order[begin];
+        return;
+    }
+    if (_nodes[nodeIdx].dimensions.x < MIN_CELL_SIZE ||
+        _nodes[nodeIdx].dimensions.y < MIN_CELL_SIZE) {
+        fatal("quadtree cell underflow; particles are too close to split");
+    }
+
+    const int firstChild = allocChildren();
+    _nodes[nodeIdx].leavesIdx = firstChild;
+    _nodes[nodeIdx].particleIdx = -1;
+    initChildBoxes(nodeIdx, firstChild);
+
+    int splits[5]; // index of begin and end of _order for each quadrant - child
+                   // q owns _order[splits[q] .. _splits[q+1]]
+    partitionRange(nodeIdx, begin, end, splits);
+
+    for (int q = 0; q < 4; q++) {
+        const int childBegin = splits[q];
+        const int childEnd = splits[q + 1];
+#pragma omp task firstprivate(                                                 \
+        q, firstChild, childBegin,                                             \
+            childEnd) if (childEnd - childBegin >                              \
+                              BUILD_TASK_GRAIN) // do not spawn tasks if child
+                                                // count under cap
+        buildSubtree(firstChild + q, childBegin, childEnd);
+    }
+#pragma omp taskwait
+}
+
+void OpenMpBackend::build() {
+    const int n = static_cast<int>(_particles.size());
+    if (n == 0) {
+        return;
+    }
+
+    _order.resize(static_cast<size_t>(n));
+    _orderScratch.resize(static_cast<size_t>(n));
+    for (int i = 0; i < n; i++) {
+        _order[i] = i;
+    }
+
+    const int cap = n * BUILD_NODE_CAP_PER_PARTICLE + 1;
+    if (static_cast<int>(_nodes.size()) < cap) {
+        _nodes.resize(static_cast<size_t>(cap));
+    }
+    _nextNode = 1;
+
+#pragma omp parallel
+    {
+#pragma omp single
+        buildSubtree(0, 0, n);
+    }
+
+    _nodes.resize(static_cast<size_t>(_nextNode));
 }
 
 void OpenMpBackend::accumulateMass(int nodeIdx, int depth) {
